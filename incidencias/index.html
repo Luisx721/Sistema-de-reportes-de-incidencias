@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Sistema de Reportes de Infraestructura | UES</title>
+  <link rel="icon" href="files/images/logo.png" type="image/png">
+  <link rel="stylesheet" href="styles/index.css">
+</head>
+<body>
+ 
+  <header class="encabezado">
+    <div class="banner">
+      <div class="marca">
+        <img class="logo" src="files/images/logo.png" alt="Escudo Universidad de El Salvador">
+        <div>
+          <h1 class="titulo">Sistema de Reportes UES</h1>
+          <p class="subtitulo-marca">Mantenimiento e Infraestructura del Campus</p>
+        </div>
+      </div>
+
+      <nav class="menu" aria-label="Secciones de la aplicación">
+        <button class="menu-actual" type="button" aria-haspopup="true" aria-expanded="false">
+          <span id="seccionActual">Reportar Incidencia</span>
+          <span class="flecha" aria-hidden="true"></span>
+        </button>
+        <ul class="menu-lista">
+          <li><a href="#reportar-incidencia" aria-current="page">Reportar Incidencia</a></li>
+        </ul>
+      </nav>
+    </div>
+  </header>
+
+  <main class="contenedor-principal" id="reportar-incidencia">
+    <div class="tarjeta-formulario">
+      <header class="encabezado-formulario">
+        <span class="etiqueta-institucional">Servicios Generales</span>
+        <h2 class="titulo-formulario">Formulario de Reporte de Incidencias</h2>
+        <p class="descripcion-formulario">
+          Completa los campos requeridos para notificar averías, daños o problemas en la infraestructura universitaria. Tu reporte generará un código de seguimiento para consultar su avance.
+        </p>
+      </header>
+
+      <!-- Mensaje dinámico de alerta para éxito o errores generales -->
+      <div id="alertaFormulario" class="alerta-formulario" style="display: none;" role="status"></div>
+
+      <form id="formIncidencia" class="formulario-reporte" novalidate>
+        
+        <!-- SECCIÓN 1: DATOS DEL REPORTANTE -->
+        <fieldset class="seccion-formulario">
+          <legend class="leyenda-seccion">
+            <span class="numero-paso">1</span>
+            Datos del Reportante
+          </legend>
+          <p class="nota-seccion">La información de contacto permite validar el reporte y notificar resoluciones.</p>
+
+          <div class="fila-campos">
+            <div class="campo" id="campo-tipoReportante">
+              <label for="tipoReportante">
+                Rol universitario <span class="requerido" aria-hidden="true">*</span>
+              </label>
+              <select id="tipoReportante" name="tipoReportante" required>
+                <option value="" disabled selected>Selecciona tu rol...</option>
+                <option value="estudiante">Estudiante</option>
+                <option value="docente">Docente</option>
+                <option value="administrativo">Personal Administrativo</option>
+              </select>
+              <span class="texto-ayuda">Indica tu vinculación con la facultad.</span>
+            </div>
+
+            <div class="campo" id="campo-nombreReportante">
+              <label for="nombreReportante">
+                Nombre completo <span class="requerido" aria-hidden="true">*</span>
+              </label>
+              <input 
+                type="text" 
+                id="nombreReportante" 
+                name="nombreReportante" 
+                placeholder="Ej. Juan Carlos Pérez" 
+                required 
+                autocomplete="name">
+              <span class="texto-ayuda">Nombre y apellidos.</span>
+            </div>
+
+            <div class="campo" id="campo-correoReportante">
+              <label for="correoReportante">
+                Correo institucional <span class="requerido" aria-hidden="true">*</span>
+              </label>
+              <input 
+                type="email" 
+                id="correoReportante" 
+                name="correoReportante" 
+                placeholder="ejemplo@ues.edu.sv" 
+                required 
+                autocomplete="email">
+              <span class="texto-ayuda">Correo institucional de la UES (@ues.edu.sv).</span>
+            </div>
+          </div>
+        </fieldset>
+
+        <!-- SECCIÓN 2: UBICACIÓN Y CATEGORÍA -->
+        <fieldset class="seccion-formulario">
+          <legend class="leyenda-seccion">
+            <span class="numero-paso">2</span>
+            Ubicación y Clasificación
+          </legend>
+          <p class="nota-seccion">Especifica dónde se encuentra la falla para agilizar la inspección técnica.</p>
+
+          <div class="fila-campos">
+            <div class="campo" id="campo-categoria">
+              <label for="categoria">
+                Categoría del daño <span class="requerido" aria-hidden="true">*</span>
+              </label>
+              <select id="categoria" name="categoria" required>
+                <option value="" disabled selected>Selecciona la categoría...</option>
+                <option value="mobiliario">Mobiliario (pupitres, escritorios, puertas, pizarras)</option>
+                <option value="redes">Redes y Conectividad (Wi-Fi, cableado de red, switches)</option>
+                <option value="servicios-basicos">Servicios Básicos (agua potable, electricidad, aire acondicionado)</option>
+                <option value="laboratorios">Laboratorios y Equipos de cómputo/ciencias</option>
+                <option value="otros">Otros</option>
+              </select>
+              <span class="texto-ayuda">Tipo de infraestructura afectada.</span>
+            </div>
+
+            <div class="campo" id="campo-ubicacion">
+              <label for="ubicacion">
+                Edificio o área general <span class="requerido" aria-hidden="true">*</span>
+              </label>
+              <select id="ubicacion" name="ubicacion" required>
+                <option value="" disabled selected>Selecciona el edificio o área...</option>
+                <option value="edificio-aulas">Edificio de Aulas</option>
+                <option value="laboratorios-computo">Laboratorios de Cómputo</option>
+                <option value="laboratorios-ciencias">Laboratorios de Ciencias</option>
+                <option value="biblioteca">Biblioteca Central de Facultad</option>
+                <option value="areas-comunes">Áreas Comunes y Pasillos</option>
+                <option value="oficinas-admin">Oficinas Administrativas</option>
+                <option value="sanitarios">Módulos Sanitarios</option>
+                <option value="cafeteria">Cafetería / Zona Recreativa</option>
+                <option value="otro">Otra área</option>
+              </select>
+              <span class="texto-ayuda">Instalación principal donde ocurre la incidencia.</span>
+            </div>
+          </div>
+
+          <div class="campo" id="campo-detalleUbicacion">
+            <label for="detalleUbicacion">
+              Detalle exacto de la ubicación <span class="requerido" aria-hidden="true">*</span>
+            </label>
+            <input 
+              type="text" 
+              id="detalleUbicacion" 
+              name="detalleUbicacion" 
+              placeholder="Ej. Aula 204, 2° nivel, extremo poniente" 
+              required>
+            <span class="texto-ayuda">Piso, número de aula, cubículo o referencia visible.</span>
+          </div>
+        </fieldset>
+
+        <!-- SECCIÓN 3: DESCRIPCIÓN DETALLADA -->
+        <fieldset class="seccion-formulario">
+          <legend class="leyenda-seccion">
+            <span class="numero-paso">3</span>
+            Descripción del Problema
+          </legend>
+          <p class="nota-seccion">Detalla qué ocurre y cómo afecta las actividades en la facultad.</p>
+
+          <div class="campo" id="campo-descripcion">
+            <label for="descripcion">
+              Descripción de la falla o daño <span class="requerido" aria-hidden="true">*</span>
+            </label>
+            <textarea 
+              id="descripcion" 
+              name="descripcion" 
+              rows="4" 
+              minlength="20" 
+              placeholder="Describe detalladamente el daño o problema observado (mínimo 20 caracteres)..." 
+              required></textarea>
+            <div class="contador-caracteres">
+              <span>Mínimo requerido: 20 caracteres</span>
+              <span id="contadorTexto">0 caracteres</span>
+            </div>
+          </div>
+        </fieldset>
+
+        <!-- SECCIÓN 4: EVIDENCIA FOTOGRÁFICA -->
+        <fieldset class="seccion-formulario">
+          <legend class="leyenda-seccion">
+            <span class="numero-paso">4</span>
+            Evidencia Fotográfica
+          </legend>
+          <p class="nota-seccion">Adjuntar fotografías acelera el diagnóstico y la asignación del personal de mantenimiento.</p>
+
+          <div class="campo" id="campo-evidencias">
+            <label for="evidencias">Fotografías del daño (Opcional, máx. 3 fotos)</label>
+            
+            <div class="zona-subida" id="zonaSubida">
+              <input 
+                type="file" 
+                id="evidencias" 
+                name="evidencias" 
+                accept="image/jpeg,image/png,image/webp" 
+                multiple 
+                class="input-archivo-oculto">
+              
+              <div class="icono-subida" aria-hidden="true">
+                <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                  <polyline points="17 8 12 3 7 8"/>
+                  <line x1="12" y1="3" x2="12" y2="15"/>
+                </svg>
+              </div>
+
+              <p class="texto-principal-subida">
+                <strong>Haz clic aquí para seleccionar imágenes</strong> o arrástralas a esta zona
+              </p>
+              <p class="texto-secundario-subida">
+                Formatos permitidos: JPG, PNG o WEBP. Máximo 3 imágenes, hasta 5 MB cada una.
+              </p>
+            </div>
+
+            <!-- Contenedor para visualización previa de fotos -->
+            <div class="galeria-previa" id="galeriaPrevia" aria-live="polite"></div>
+          </div>
+        </fieldset>
+
+        <!-- ACCIONES DEL FORMULARIO -->
+        <div class="acciones-formulario">
+          <button type="reset" class="boton boton-secundario" id="btnLimpiar">
+            Limpiar Formulario
+          </button>
+          <button type="submit" class="boton boton-primario" id="btnEnviar">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <line x1="22" y1="2" x2="11" y2="13"></line>
+              <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+            </svg>
+            Enviar Reporte de Incidencia
+          </button>
+        </div>
+
+      </form>
+    </div>
+  </main>
+
+  <footer class="pie-pagina">
+    <div class="contenido-pie">
+      <p><strong>Universidad de El Salvador</strong> — Unidad de Servicios Generales y Mantenimiento</p>
+      <p class="pie-secundario">Canal institucional de recepción de incidencias de infraestructura del campus universitario.</p>
+    </div>
+  </footer>
+
+  <script src="scripts/index.js"></script>
+</body>
+</html>

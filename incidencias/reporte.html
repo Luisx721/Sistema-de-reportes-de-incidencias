@@ -1,2 +1,359 @@
 <!doctype html>
-<html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="theme-color" content="#a60000"><title>Reportar incidencia | Reportes UES</title><link rel="icon" href="files/images/logo.png"><link rel="stylesheet" href="styles/index.css"></head><body data-page="reportar"><a class="skip-link" href="#contenido">Saltar al contenido</a><div class="demo-bar"><div class="wrap"><span><i></i> PROTOTIPO INTERACTIVO</span><span>Datos de ejemplo · Los reportes se guardan solo en este navegador</span></div></div><header class="site-header"><div class="wrap header-inner"><a class="brand" href="index.html" aria-label="Sistema de Reportes UES, inicio"><img src="files/images/logo.png" alt="Logo del sistema"><span><small>UNIVERSIDAD DE EL SALVADOR</small><strong>Reportes <span class="brand-accent">UES</span></strong></span></a><button class="menu-toggle" aria-controls="main-nav" aria-expanded="false" aria-label="Abrir menú"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"/></svg></button><nav id="main-nav" class="main-nav" aria-label="Navegación principal"><a href="index.html">Inicio</a><a href="incidencias.html">Incidencias</a><a href="seguimiento.html">Seguimiento</a><a href="ayuda.html">Cómo reportar</a><a class="nav-account" href="login.html" id="account-link">Iniciar sesión</a><button id="logout" class="text-button" hidden>Salir</button><a href="reporte.html" class="button button-small"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg> Reportar</a></nav></div></header><main id="contenido" class="wrap main-content"><header class="page-heading"><p class="eyebrow">NUEVO REPORTE</p><h1>Cuéntanos qué ocurre.</h1><p>No necesitas una cuenta. Describe el problema y guarda el código para consultar su atención.</p></header><div class="form-layout"><form id="incident-form" class="surface report-form" novalidate><div class="form-status" id="report-status" role="alert" hidden></div><fieldset><legend><span class="step-number">01</span> Ubicación y categoría</legend><p class="field-note">Los campos marcados con * son obligatorios.</p><div class="field-grid"><div class="field"><label for="category">Categoría *</label><select id="category" name="category" required><option value="">Selecciona una categoría</option></select><span class="field-error" id="category-error"></span></div><div class="field"><label for="location">Ubicación *</label><select id="location" name="location" required><option value="">Selecciona una ubicación</option></select><span class="field-error" id="location-error"></span></div></div><div class="field"><label for="reference">Referencia adicional <span>Opcional</span></label><input id="reference" name="reference" maxlength="200" placeholder="Ej. segundo nivel, junto a la entrada principal"><p class="field-note">Evita incluir nombres, teléfonos o datos personales.</p></div></fieldset><fieldset><legend><span class="step-number">02</span> Describe el problema</legend><div class="field"><label for="description">¿Qué daño o falla observaste? *</label><textarea id="description" name="description" rows="5" minlength="20" maxlength="2000" required placeholder="Ej. La lámpara del pasillo de la biblioteca no enciende y el área queda oscura por la tarde."></textarea><div class="field-meta"><span>Mínimo 20 caracteres</span><span id="character-count">0 / 2000</span></div><span class="field-error" id="description-error"></span></div></fieldset><fieldset><legend><span class="step-number">03</span> Fotografías <small>Opcional</small></legend><div id="dropzone" class="upload-zone"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8" cy="8" r="1"/><path d="m3 17 5-5 4 4 3-5 6 6"/></svg><label for="photos"><strong>Selecciona fotografías</strong> o arrástralas aquí</label><p>Hasta 3 imágenes JPG o PNG · Máximo 5 MB por imagen</p><input type="file" id="photos" accept="image/jpeg,image/png" multiple aria-describedby="photo-error"></div><p id="photo-error" class="field-error" role="alert"></p><div id="photo-previews" class="photo-previews"></div></fieldset><fieldset><legend><span class="step-number">04</span> Sobre ti <small>Opcional</small></legend><p class="field-note">Puedes dejar estos campos vacíos. No aparecen en la consulta pública.</p><div class="field-grid"><div class="field"><label for="reporter-name">Nombre</label><input id="reporter-name" name="reporterName" autocomplete="name" maxlength="100" placeholder="Tu nombre"></div><div class="field"><label for="reporter-link">Vínculo con la universidad</label><select id="reporter-link" name="reporterLink"><option value="">Prefiero no indicarlo</option><option>Estudiante</option><option>Docente</option><option>Personal administrativo</option><option>Ordenanza</option><option>Jefatura</option></select></div></div></fieldset><div class="form-actions"><button type="reset" class="button button-quiet">Limpiar formulario</button><button type="submit" class="button" id="send-report">Enviar reporte <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14m-6-6 6 6-6 6"/></svg></button></div><p class="local-note">Demostración: el reporte se guarda en este navegador. No se envía a la universidad.</p></form><aside class="report-aside"><p class="eyebrow">ANTES DE ENVIAR</p><h2>Los detalles importan.</h2><ul class="tips"><li><span>1</span><div><strong>Identifica el lugar</strong><p>Selecciona una ubicación y agrega referencias si las necesitas.</p></div></li><li><span>2</span><div><strong>Describe lo que observas</strong><p>Explica el daño y cómo afecta el uso del espacio.</p></div></li><li><span>3</span><div><strong>Conserva tu código</strong><p>Lo necesitarás para revisar el estado y las observaciones.</p></div></li></ul><div class="aside-note"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg><p>La prioridad y la atención serán evaluadas por la unidad responsable.</p></div><a class="text-link" href="ayuda.html">Ver guía completa <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14m-6-6 6 6-6 6"/></svg></a></aside></div></main><footer class="site-footer"><div class="wrap footer-inner"><div><strong>Un campus mejor empieza contigo.</strong><p>Infraestructura · Facultad Multidisciplinaria Oriental, UES</p></div><a href="ayuda.html">¿Necesitas orientación? <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14m-6-6 6 6-6 6"/></svg></a></div></footer><div class="toast" id="toast" role="status" hidden></div><script type="module" src="scripts/index.js"></script></body></html>
+<html lang="es">
+  <!-- Configuración de la página -->
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#a60000" />
+    <title>Reportar incidencia | Reportes UES</title>
+    <link rel="icon" href="files/images/logo.png" />
+    <link rel="stylesheet" href="styles/index.css" />
+  </head>
+  <body data-page="reportar">
+    <!-- Acceso directo al contenido -->
+    <a class="skip-link" href="#contenido">Saltar al contenido</a>
+
+    <!-- Aviso de demostración -->
+    <div class="demo-bar">
+      <div class="wrap">
+        <span>
+          <i></i>
+          PROTOTIPO INTERACTIVO
+        </span>
+        <span>Datos de ejemplo · Los reportes se guardan solo en este navegador</span>
+      </div>
+    </div>
+
+    <!-- Encabezado y navegación -->
+    <header class="site-header">
+      <div class="wrap header-inner">
+        <a class="brand" href="index.html" aria-label="Sistema de Reportes UES, inicio">
+          <img src="files/images/logo.png" alt="Logo del sistema" />
+          <span>
+            <small>UNIVERSIDAD DE EL SALVADOR</small>
+            <strong>
+              Reportes
+              <span class="brand-accent">UES</span>
+            </strong>
+          </span>
+        </a>
+        <button
+          class="menu-toggle"
+          aria-controls="main-nav"
+          aria-expanded="false"
+          aria-label="Abrir menú"
+        >
+          <svg
+            class="icon"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.7"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            aria-hidden="true"
+          >
+            <path d="M4 6h16M4 12h16M4 18h16" />
+          </svg>
+        </button>
+        <nav id="main-nav" class="main-nav" aria-label="Navegación principal">
+          <a href="index.html">Inicio</a>
+          <a href="incidencias.html">Incidencias</a>
+          <a href="seguimiento.html">Seguimiento</a>
+          <a href="ayuda.html">Cómo reportar</a>
+          <a class="nav-account" href="login.html" id="account-link">Iniciar sesión</a>
+          <button id="logout" class="text-button" hidden>Salir</button>
+          <a href="reporte.html" class="button button-small">
+            <svg
+              class="icon"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.7"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              aria-hidden="true"
+            >
+              <path d="M12 5v14M5 12h14" />
+            </svg>
+            Reportar
+          </a>
+        </nav>
+      </div>
+    </header>
+
+    <!-- Contenido de la página -->
+    <main id="contenido" class="wrap main-content">
+      <!-- Presentación del formulario -->
+      <header class="page-heading">
+        <p class="eyebrow">NUEVO REPORTE</p>
+        <h1>Cuéntanos qué ocurre.</h1>
+        <p>
+          No necesitas una cuenta. Describe el problema y guarda el código para consultar
+          su atención.
+        </p>
+      </header>
+      <div class="form-layout">
+        <!-- Formulario de reporte -->
+        <form id="incident-form" class="surface report-form" novalidate>
+          <!-- Mensajes de validación -->
+          <div class="form-status" id="report-status" role="alert" hidden></div>
+
+          <!-- Ubicación y categoría -->
+          <fieldset>
+            <legend>
+              <span class="step-number">01</span>
+              Ubicación y categoría
+            </legend>
+            <p class="field-note">Los campos marcados con * son obligatorios.</p>
+            <div class="field-grid">
+              <div class="field">
+                <label for="category">Categoría *</label>
+                <select id="category" name="category" required>
+                  <option value="">Selecciona una categoría</option>
+                </select>
+                <span class="field-error" id="category-error"></span>
+              </div>
+              <div class="field">
+                <label for="location">Ubicación *</label>
+                <select id="location" name="location" required>
+                  <option value="">Selecciona una ubicación</option>
+                </select>
+                <span class="field-error" id="location-error"></span>
+              </div>
+            </div>
+            <div class="field">
+              <label for="reference">
+                Referencia adicional
+                <span>Opcional</span>
+              </label>
+              <input
+                id="reference"
+                name="reference"
+                maxlength="200"
+                placeholder="Ej. segundo nivel, junto a la entrada principal"
+              />
+              <p class="field-note">
+                Evita incluir nombres, teléfonos o datos personales.
+              </p>
+            </div>
+          </fieldset>
+
+          <!-- Descripción del problema -->
+          <fieldset>
+            <legend>
+              <span class="step-number">02</span>
+              Describe el problema
+            </legend>
+            <div class="field">
+              <label for="description">¿Qué daño o falla observaste? *</label>
+              <textarea
+                id="description"
+                name="description"
+                rows="5"
+                minlength="20"
+                maxlength="2000"
+                required
+                placeholder="Ej. La lámpara del pasillo de la biblioteca no enciende y el área queda oscura por la tarde."
+              ></textarea>
+              <div class="field-meta">
+                <span>Mínimo 20 caracteres</span>
+                <span id="character-count">0 / 2000</span>
+              </div>
+              <span class="field-error" id="description-error"></span>
+            </div>
+          </fieldset>
+
+          <!-- Fotografías opcionales -->
+          <fieldset>
+            <legend>
+              <span class="step-number">03</span>
+              Fotografías
+              <small>Opcional</small>
+            </legend>
+            <div id="dropzone" class="upload-zone">
+              <svg
+                class="icon"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.7"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                aria-hidden="true"
+              >
+                <rect x="3" y="3" width="18" height="18" rx="3" />
+                <circle cx="8" cy="8" r="1" />
+                <path d="m3 17 5-5 4 4 3-5 6 6" />
+              </svg>
+              <label for="photos">
+                <strong>Selecciona fotografías</strong>
+                o arrástralas aquí
+              </label>
+              <p>Hasta 3 imágenes JPG o PNG · Máximo 5 MB por imagen</p>
+              <input
+                type="file"
+                id="photos"
+                accept="image/jpeg,image/png"
+                multiple
+                aria-describedby="photo-error"
+              />
+            </div>
+            <p id="photo-error" class="field-error" role="alert"></p>
+            <div id="photo-previews" class="photo-previews"></div>
+          </fieldset>
+
+          <!-- Identificación opcional -->
+          <fieldset>
+            <legend>
+              <span class="step-number">04</span>
+              Sobre ti
+              <small>Opcional</small>
+            </legend>
+            <p class="field-note">
+              Puedes dejar estos campos vacíos. No aparecen en la consulta pública.
+            </p>
+            <div class="field-grid">
+              <div class="field">
+                <label for="reporter-name">Nombre</label>
+                <input
+                  id="reporter-name"
+                  name="reporterName"
+                  autocomplete="name"
+                  maxlength="100"
+                  placeholder="Tu nombre"
+                />
+              </div>
+              <div class="field">
+                <label for="reporter-link">Vínculo con la universidad</label>
+                <select id="reporter-link" name="reporterLink">
+                  <option value="">Prefiero no indicarlo</option>
+                  <option>Estudiante</option>
+                  <option>Docente</option>
+                  <option>Personal administrativo</option>
+                  <option>Ordenanza</option>
+                  <option>Jefatura</option>
+                </select>
+              </div>
+            </div>
+          </fieldset>
+
+          <!-- Acciones del formulario -->
+          <div class="form-actions">
+            <button type="reset" class="button button-quiet">Limpiar formulario</button>
+            <button type="submit" class="button" id="send-report">
+              Enviar reporte
+              <svg
+                class="icon"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.7"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                aria-hidden="true"
+              >
+                <path d="M5 12h14m-6-6 6 6-6 6" />
+              </svg>
+            </button>
+          </div>
+          <p class="local-note">
+            Demostración: el reporte se guarda en este navegador. No se envía a la
+            universidad.
+          </p>
+        </form>
+
+        <!-- Recomendaciones para reportar -->
+        <aside class="report-aside">
+          <p class="eyebrow">ANTES DE ENVIAR</p>
+          <h2>Los detalles importan.</h2>
+          <ul class="tips">
+            <li>
+              <span>1</span>
+              <div>
+                <strong>Identifica el lugar</strong>
+                <p>Selecciona una ubicación y agrega referencias si las necesitas.</p>
+              </div>
+            </li>
+            <li>
+              <span>2</span>
+              <div>
+                <strong>Describe lo que observas</strong>
+                <p>Explica el daño y cómo afecta el uso del espacio.</p>
+              </div>
+            </li>
+            <li>
+              <span>3</span>
+              <div>
+                <strong>Conserva tu código</strong>
+                <p>Lo necesitarás para revisar el estado y las observaciones.</p>
+              </div>
+            </li>
+          </ul>
+          <div class="aside-note">
+            <svg
+              class="icon"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.7"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              aria-hidden="true"
+            >
+              <circle cx="12" cy="12" r="9" />
+              <path d="M12 7v5l3 2" />
+            </svg>
+            <p>La prioridad y la atención serán evaluadas por la unidad responsable.</p>
+          </div>
+          <a class="text-link" href="ayuda.html">
+            Ver guía completa
+            <svg
+              class="icon"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.7"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              aria-hidden="true"
+            >
+              <path d="M5 12h14m-6-6 6 6-6 6" />
+            </svg>
+          </a>
+        </aside>
+      </div>
+    </main>
+
+    <!-- Pie de página -->
+    <footer class="site-footer">
+      <div class="wrap footer-inner">
+        <div>
+          <strong>Un campus mejor empieza contigo.</strong>
+          <p>Infraestructura · Facultad Multidisciplinaria Oriental, UES</p>
+        </div>
+        <a href="ayuda.html">
+          ¿Necesitas orientación?
+          <svg
+            class="icon"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.7"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            aria-hidden="true"
+          >
+            <path d="M5 12h14m-6-6 6 6-6 6" />
+          </svg>
+        </a>
+      </div>
+    </footer>
+
+    <!-- Mensajes temporales -->
+    <div class="toast" id="toast" role="status" hidden></div>
+
+    <!-- Funciones de la página -->
+    <script type="module" src="scripts/index.js"></script>
+  </body>
+</html>

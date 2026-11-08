@@ -41,3 +41,9 @@ El mapa es una propuesta adicional. Sus posiciones, ubicaciones y datos de ejemp
 - Selección del framework exigido por la asignatura e integración final. Esta maqueta por sí sola no cumple todo el proyecto PPI.
 
 El CSS comparte variables y componentes en `styles/index.css`. `styles/login.css` adapta las pantallas de acceso. No hay fuentes ni mapas de terceros necesarios para abrir el prototipo.
+
+## Formato del código
+
+Los archivos HTML, CSS y JavaScript usan sangría de dos espacios y comentarios sencillos en español para identificar cada sección. La configuración de Prettier y EditorConfig está dentro de esta carpeta.
+
+En Visual Studio Code puedes instalar la extensión Prettier y usar Formatear documento para conservar este estilo. El formateador es opcional para editar y no es necesario para ejecutar la página.

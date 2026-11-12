@@ -7,13 +7,13 @@ export const categories = [
   "Espacios comunes",
 ];
 
-// Ubicaciones ilustrativas del campus
+// Ubicaciones del campus (Facultad Multidisciplinaria Oriental, UES)
 export const locations = [
-  { id: "biblioteca", name: "Biblioteca", x: 24, y: 27 },
-  { id: "aulas", name: "Edificio de aulas", x: 68, y: 24 },
-  { id: "laboratorios", name: "Laboratorios", x: 26, y: 52 },
-  { id: "administracion", name: "Administración", x: 73, y: 62 },
-  { id: "zonas-comunes", name: "Áreas comunes", x: 43, y: 79 },
+  { id: "biblioteca", name: "Biblioteca", x: 24, y: 27, lat: 13.44115, lng: -88.15905 },
+  { id: "aulas", name: "Edificio de aulas", x: 68, y: 24, lat: 13.4411, lng: -88.1576 },
+  { id: "laboratorios", name: "Laboratorios", x: 26, y: 52, lat: 13.4401, lng: -88.1591 },
+  { id: "administracion", name: "Administración", x: 73, y: 62, lat: 13.44005, lng: -88.1575 },
+  { id: "zonas-comunes", name: "Áreas comunes", x: 43, y: 79, lat: 13.4396, lng: -88.15835 },
 ];
 
 // Estados de atención

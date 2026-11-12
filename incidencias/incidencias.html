@@ -8,6 +8,12 @@
     <title>Incidencias del campus | Reportes UES</title>
     <link rel="icon" href="files/images/logo.png" />
     <link rel="stylesheet" href="styles/index.css" />
+        <!-- Conexión a Leaflet para OpenStreetMap -->
+    <link
+      rel="stylesheet"
+      href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+    />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   </head>
   <body data-page="incidencias">
     <!-- Acceso directo al contenido -->
@@ -147,29 +153,20 @@
         <div id="incident-results" class="incident-list"></div>
       </section>
 
-      <!-- Mapa de demostración -->
-      <section id="map-panel" hidden aria-label="Mapa esquemático">
+      <!-- Mapa de incidencias (OpenStreetMap) -->
+      <section id="map-panel" hidden aria-label="Mapa de incidencias">
         <div class="map-notice">
-          Esquema ilustrativo · Las posiciones no son geográficas. Las ubicaciones reales
-          del campus están pendientes de validación.
+          Mapa interactivo con OpenStreetMap · Ubicaciones del campus universitario (Facultad Multidisciplinaria Oriental, UES).
         </div>
         <div class="map-layout">
-          <!-- Esquema del campus -->
-          <div class="campus-map" id="campus-map">
-            <div class="map-path horizontal"></div>
-            <div class="map-path vertical"></div>
-            <div class="map-green green-one"></div>
-            <div class="map-green green-two"></div>
-            <span class="map-north">N ↑</span>
-            <span class="map-caption">CAMPUS · ESQUEMA DE DEMOSTRACIÓN</span>
-            <div id="map-markers"></div>
-          </div>
+           <!-- Vista del mapa OpenStreetMap -->
+          <div class="campus-map" id="campus-map"></div>
 
           <!-- Incidencias de la ubicación seleccionada -->
           <aside id="map-detail" class="map-detail">
             <h2>Selecciona una ubicación</h2>
             <p>
-              Toca un marcador para ver sus incidencias. También puedes usar el listado.
+               Toca un marcador en el mapa para ver sus incidencias. También puedes usar el listado.
             </p>
           </aside>
         </div>

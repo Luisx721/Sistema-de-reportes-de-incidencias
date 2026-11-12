@@ -398,6 +398,29 @@ async function explore() {
     selectedLocation = null;
   const filters = ["#filter-category", "#filter-location", "#filter-status"];
 
+// Instancia y capa de OpenStreetMap
+  let osmMap = null;
+  let markerGroup = null;
+  function initMap() {
+    if (osmMap || !window.L || !$("#campus-map")) return;
+    // Coordenadas del campus de la Facultad Multidisciplinaria Oriental, UES
+    const campusCenter = [13.4404, -88.1583];
+    osmMap = L.map("campus-map", {
+      center: campusCenter,
+      zoom: 17,
+      minZoom: 15,
+      maxZoom: 19,
+      scrollWheelZoom: true,
+    });
+    // Conexión a las teselas de OpenStreetMap
+    L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      maxZoom: 19,
+      attribution:
+        '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a>',
+    }).addTo(osmMap);
+    markerGroup = L.layerGroup().addTo(osmMap);
+  }
+
   // Aplicación de los filtros
   function current() {
     return all.filter(
@@ -409,12 +432,13 @@ async function explore() {
   }
 
   // Detalle de la ubicación seleccionada
-  function selectLocation(id, rows) {
+  function selectLocation(id, rows, shouldPan = false) {
     selectedLocation = id;
-    document
-      .querySelectorAll(".map-marker")
-      .forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.location === id)));
-    const found = rows.filter((r) => r.location === id);
+    document.querySelectorAll(".map-marker").forEach((b) => {
+      const isMatch = b.dataset.location === id;
+      b.setAttribute("aria-pressed", String(isMatch));
+      b.classList.toggle("is-selected", isMatch);
+    });
     $("#map-detail").innerHTML = /* HTML */ `
       <p class="eyebrow">UBICACIÓN SELECCIONADA</p>
       <h2>${esc(locationName(id))}</h2>
@@ -434,6 +458,51 @@ async function explore() {
         )
         .join("")}
     `;
+
+    if (shouldPan && osmMap) {
+      const loc = locations.find((l) => l.id === id);
+      if (loc?.lat && loc?.lng) {
+        osmMap.panTo([loc.lat, loc.lng]);
+      }
+    }
+  }
+
+  // Actualización de los marcadores en OpenStreetMap
+  function renderOsmMarkers(rows) {
+    if (!osmMap || !markerGroup) return;
+    markerGroup.clearLayers();
+    for (const loc of locations) {
+      const count = rows.filter((r) => r.location === loc.id).length;
+      if (!count || !loc.lat || !loc.lng) continue;
+      const isSelected = selectedLocation === loc.id;
+      const customIcon = L.divIcon({
+        className: "osm-marker-wrapper",
+        html: /* HTML */ `
+          <button
+            type="button"
+            class="map-marker ${isSelected ? "is-selected" : ""}"
+            data-location="${loc.id}"
+            aria-label="${esc(loc.name)}: ${count} incidencia(s)"
+            aria-pressed="${String(isSelected)}"
+          >
+            <b>${count}</b>
+            <span>${esc(loc.name)}</span>
+          </button>
+        `,
+        iconSize: [110, 60],
+        iconAnchor: [55, 18],
+      });
+      const marker = L.marker([loc.lat, loc.lng], {
+        icon: customIcon,
+        title: `${loc.name}: ${count} incidencia(s)`,
+      });
+      marker.on("click", (e) => {
+        if (window.L) L.DomEvent.stopPropagation(e);
+        selectLocation(loc.id, current(), true);
+        renderOsmMarkers(current());
+      });
+      markerGroup.addLayer(marker);
+    }
   }
 
   // Actualización de los resultados y marcadores
@@ -449,37 +518,24 @@ async function explore() {
             <p>Prueba otra combinación de filtros.</p>
           </div>
         `;
-    $("#map-markers").replaceChildren();
-    for (const loc of locations) {
-      const count = rows.filter((r) => r.location === loc.id).length;
-      if (!count) continue;
-      const button = document.createElement("button");
-      button.className = "map-marker";
-      button.style.left = loc.x + "%";
-      button.style.top = loc.y + "%";
-      button.dataset.location = loc.id;
-      button.setAttribute("aria-label", `${loc.name}: ${count} incidencia(s)`);
-      button.setAttribute("aria-pressed", String(selectedLocation === loc.id));
-      button.innerHTML = /* HTML */ `
-        <b>${count}</b>
-        <span>${esc(loc.name)}</span>
-      `;
-      button.addEventListener("click", () => selectLocation(loc.id, current()));
-      $("#map-markers").append(button);
-    }
-    if (selectedLocation && rows.some((r) => r.location === selectedLocation))
-      selectLocation(selectedLocation, rows);
-    else {
+
+    const filterLocationValue = $("#filter-location").value;
+    if (filterLocationValue && rows.some((r) => r.location === filterLocationValue)) {
+      selectLocation(filterLocationValue, rows, true);
+    } else if (selectedLocation && rows.some((r) => r.location === selectedLocation)) {
+      selectLocation(selectedLocation, rows, false);
+    } else {
       selectedLocation = null;
       $("#map-detail").innerHTML = /* HTML */ `
         <h2>${rows.length ? "Selecciona una ubicación" : "No hay coincidencias"}</h2>
         <p>
           ${rows.length
-            ? "Toca un marcador para consultar sus incidencias."
+            ? "Toca un marcador en el mapa para consultar sus incidencias."
             : "Prueba otra combinación de filtros."}
         </p>
       `;
     }
+    renderOsmMarkers(rows);
   }
 
   // Cambio entre listado y mapa
@@ -493,6 +549,16 @@ async function explore() {
       "",
       map ? "incidencias.html?vista=mapa" : "incidencias.html",
     );
+
+    if (map) {
+      if (!osmMap) {
+        initMap();
+        renderOsmMarkers(current());
+      }
+      setTimeout(() => {
+        osmMap?.invalidateSize();
+      }, 80);
+    }
   }
   $("#list-view").addEventListener("click", () => view(false));
   $("#map-view").addEventListener("click", () => view(true));
@@ -505,7 +571,13 @@ async function explore() {
   try {
     await seed();
     all = sortReports(await getReports());
+    if ($("#campus-map") && window.L && !osmMap) {
+      initMap();
+    }
     render();
+    if (query.get("vista") === "mapa" && osmMap) {
+      setTimeout(() => osmMap.invalidateSize(), 100);
+    }
   } catch {
     failure($("#incident-results"));
     failure($("#map-detail"));

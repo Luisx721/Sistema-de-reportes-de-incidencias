@@ -23,3 +23,12 @@
   2. **Restricciones de envío:** Se interceptó el evento `submit` en JavaScript para evitar envíos con campos vacíos. Se valida que el rol, nombre (mínimo 3 caracteres), correo institucional válido, categoría, ubicación, detalle de ubicación y descripción (mínimo 20 caracteres) cumplan los criterios antes de procesar el reporte.
   3. **Retroalimentación visual y accesible:** Los campos inválidos se resaltan con bordes y fondos de error accesibles (`#dc3545`), acompañados de mensajes descriptivos y enfoque automático (`scrollIntoView` y `focus`) en el primer campo inválido.
   4. **Notificación de estado:** Se añadió un componente de alerta que muestra tanto advertencias de campos incompletos como la confirmación de éxito con código de seguimiento simulado (`INC-2026-XXXXX`).
+
+## Decisión 03: Portal público y maqueta del reportante
+
+- **Fecha:** 2026-11-08
+- **Estado:** Implementada como prototipo; sustituye las restricciones de identificación de las decisiones 01 y 02.
+- **Decisión:** `index.html` es el portal público y `reporte.html` contiene el formulario. Invitados pueden reportar y consultar por código. Nombre y vínculo son opcionales en el reporte. El registro de cuenta tiene sus propios campos y no es un requisito para reportar.
+- **Diseño:** se conserva el logo y el rojo institucional con degradado, tarjetas de borde discreto, navegación pública y acceso visible como invitado. Login y registro usan páginas independientes con una columna de campos para evitar recortes.
+- **Alcance:** sesión de reportante simulada, persistencia local mediante IndexedDB, cinco estados, consulta pública, orientación, listado y mapa esquemático adicional. No hay autenticación, envío institucional ni panel administrativo real. No se modifica la carpeta `figma`.
+- **Consecuencias:** el prototipo permite recorrer el frontend completo y conserva fotografías entre visitas al mismo origen. Los datos son locales; la API, la autenticación y los permisos deberán sustituir la simulación. Véase README para limitaciones e integración pendiente.

@@ -1,253 +1,395 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="es">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Sistema de Reportes de Infraestructura | UES</title>
-  <link rel="icon" href="files/images/logo.png" type="image/png">
-  <link rel="stylesheet" href="styles/index.css">
-</head>
-<body>
- 
-  <header class="encabezado">
-    <div class="banner">
-      <div class="marca">
-        <img class="logo" src="files/images/logo.png" alt="Escudo Universidad de El Salvador">
-        <div>
-          <h1 class="titulo">Sistema de Reportes UES</h1>
-          <p class="subtitulo-marca">Mantenimiento e Infraestructura del Campus</p>
-        </div>
+  <!-- Configuración de la página -->
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#a60000" />
+    <title>Inicio | Reportes UES</title>
+    <link rel="icon" href="files/images/logo.png" />
+    <link rel="stylesheet" href="styles/index.css" />
+  </head>
+  <body data-page="inicio">
+    <!-- Acceso directo al contenido -->
+    <a class="skip-link" href="#contenido">Saltar al contenido</a>
+
+    <!-- Aviso de demostración -->
+    <div class="demo-bar">
+      <div class="wrap">
+        <span>
+          <i></i>
+          PROTOTIPO INTERACTIVO
+        </span>
+        <span>Datos de ejemplo · Los reportes se guardan solo en este navegador</span>
       </div>
+    </div>
 
-      <nav class="menu" aria-label="Secciones de la aplicación">
-        <button class="menu-actual" type="button" aria-haspopup="true" aria-expanded="false">
-          <span id="seccionActual">Reportar Incidencia</span>
-          <span class="flecha" aria-hidden="true"></span>
+    <!-- Encabezado y navegación -->
+    <header class="site-header">
+      <div class="wrap header-inner">
+        <a class="brand" href="index.html" aria-label="Sistema de Reportes UES, inicio">
+          <img src="files/images/logo.png" alt="Logo del sistema" />
+          <span>
+            <small>UNIVERSIDAD DE EL SALVADOR</small>
+            <strong>
+              Reportes
+              <span class="brand-accent">UES</span>
+            </strong>
+          </span>
+        </a>
+        <button
+          class="menu-toggle"
+          aria-controls="main-nav"
+          aria-expanded="false"
+          aria-label="Abrir menú"
+        >
+          <svg
+            class="icon"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.7"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            aria-hidden="true"
+          >
+            <path d="M4 6h16M4 12h16M4 18h16" />
+          </svg>
         </button>
-        <ul class="menu-lista">
-          <li><a href="#reportar-incidencia" aria-current="page">Reportar Incidencia</a></li>
-        </ul>
-      </nav>
-    </div>
-  </header>
-
-  <main class="contenedor-principal" id="reportar-incidencia">
-    <div class="tarjeta-formulario">
-      <header class="encabezado-formulario">
-        <span class="etiqueta-institucional">Servicios Generales</span>
-        <h2 class="titulo-formulario">Formulario de Reporte de Incidencias</h2>
-        <p class="descripcion-formulario">
-          Completa los campos requeridos para notificar averías, daños o problemas en la infraestructura universitaria. Tu reporte generará un código de seguimiento para consultar su avance.
-        </p>
-      </header>
-
-      <!-- Mensaje dinámico de alerta para éxito o errores generales -->
-      <div id="alertaFormulario" class="alerta-formulario" style="display: none;" role="status"></div>
-
-      <form id="formIncidencia" class="formulario-reporte" novalidate>
-        
-        <!-- SECCIÓN 1: DATOS DEL REPORTANTE -->
-        <fieldset class="seccion-formulario">
-          <legend class="leyenda-seccion">
-            <span class="numero-paso">1</span>
-            Datos del Reportante
-          </legend>
-          <p class="nota-seccion">La información de contacto permite validar el reporte y notificar resoluciones.</p>
-
-          <div class="fila-campos">
-            <div class="campo" id="campo-tipoReportante">
-              <label for="tipoReportante">
-                Rol universitario <span class="requerido" aria-hidden="true">*</span>
-              </label>
-              <select id="tipoReportante" name="tipoReportante" required>
-                <option value="" disabled selected>Selecciona tu rol...</option>
-                <option value="estudiante">Estudiante</option>
-                <option value="docente">Docente</option>
-                <option value="administrativo">Personal Administrativo</option>
-              </select>
-              <span class="texto-ayuda">Indica tu vinculación con la facultad.</span>
-            </div>
-
-            <div class="campo" id="campo-nombreReportante">
-              <label for="nombreReportante">
-                Nombre completo <span class="requerido" aria-hidden="true">*</span>
-              </label>
-              <input 
-                type="text" 
-                id="nombreReportante" 
-                name="nombreReportante" 
-                placeholder="Ej. Juan Carlos Pérez" 
-                required 
-                autocomplete="name">
-              <span class="texto-ayuda">Nombre y apellidos.</span>
-            </div>
-
-            <div class="campo" id="campo-correoReportante">
-              <label for="correoReportante">
-                Correo institucional <span class="requerido" aria-hidden="true">*</span>
-              </label>
-              <input 
-                type="email" 
-                id="correoReportante" 
-                name="correoReportante" 
-                placeholder="ejemplo@ues.edu.sv" 
-                required 
-                autocomplete="email">
-              <span class="texto-ayuda">Correo institucional de la UES (@ues.edu.sv).</span>
-            </div>
-          </div>
-        </fieldset>
-
-        <!-- SECCIÓN 2: UBICACIÓN Y CATEGORÍA -->
-        <fieldset class="seccion-formulario">
-          <legend class="leyenda-seccion">
-            <span class="numero-paso">2</span>
-            Ubicación y Clasificación
-          </legend>
-          <p class="nota-seccion">Especifica dónde se encuentra la falla para agilizar la inspección técnica.</p>
-
-          <div class="fila-campos">
-            <div class="campo" id="campo-categoria">
-              <label for="categoria">
-                Categoría del daño <span class="requerido" aria-hidden="true">*</span>
-              </label>
-              <select id="categoria" name="categoria" required>
-                <option value="" disabled selected>Selecciona la categoría...</option>
-                <option value="mobiliario">Mobiliario (pupitres, escritorios, puertas, pizarras)</option>
-                <option value="redes">Redes y Conectividad (Wi-Fi, cableado de red, switches)</option>
-                <option value="servicios-basicos">Servicios Básicos (agua potable, electricidad, aire acondicionado)</option>
-                <option value="laboratorios">Laboratorios y Equipos de cómputo/ciencias</option>
-                <option value="otros">Otros</option>
-              </select>
-              <span class="texto-ayuda">Tipo de infraestructura afectada.</span>
-            </div>
-
-            <div class="campo" id="campo-ubicacion">
-              <label for="ubicacion">
-                Edificio o área general <span class="requerido" aria-hidden="true">*</span>
-              </label>
-              <select id="ubicacion" name="ubicacion" required>
-                <option value="" disabled selected>Selecciona el edificio o área...</option>
-                <option value="edificio-aulas">Edificio de Aulas</option>
-                <option value="laboratorios-computo">Laboratorios de Cómputo</option>
-                <option value="laboratorios-ciencias">Laboratorios de Ciencias</option>
-                <option value="biblioteca">Biblioteca Central de Facultad</option>
-                <option value="areas-comunes">Áreas Comunes y Pasillos</option>
-                <option value="oficinas-admin">Oficinas Administrativas</option>
-                <option value="sanitarios">Módulos Sanitarios</option>
-                <option value="cafeteria">Cafetería / Zona Recreativa</option>
-                <option value="otro">Otra área</option>
-              </select>
-              <span class="texto-ayuda">Instalación principal donde ocurre la incidencia.</span>
-            </div>
-          </div>
-
-          <div class="campo" id="campo-detalleUbicacion">
-            <label for="detalleUbicacion">
-              Detalle exacto de la ubicación <span class="requerido" aria-hidden="true">*</span>
-            </label>
-            <input 
-              type="text" 
-              id="detalleUbicacion" 
-              name="detalleUbicacion" 
-              placeholder="Ej. Aula 204, 2° nivel, extremo poniente" 
-              required>
-            <span class="texto-ayuda">Piso, número de aula, cubículo o referencia visible.</span>
-          </div>
-        </fieldset>
-
-        <!-- SECCIÓN 3: DESCRIPCIÓN DETALLADA -->
-        <fieldset class="seccion-formulario">
-          <legend class="leyenda-seccion">
-            <span class="numero-paso">3</span>
-            Descripción del Problema
-          </legend>
-          <p class="nota-seccion">Detalla qué ocurre y cómo afecta las actividades en la facultad.</p>
-
-          <div class="campo" id="campo-descripcion">
-            <label for="descripcion">
-              Descripción de la falla o daño <span class="requerido" aria-hidden="true">*</span>
-            </label>
-            <textarea 
-              id="descripcion" 
-              name="descripcion" 
-              rows="4" 
-              minlength="20" 
-              placeholder="Describe detalladamente el daño o problema observado (mínimo 20 caracteres)..." 
-              required></textarea>
-            <div class="contador-caracteres">
-              <span>Mínimo requerido: 20 caracteres</span>
-              <span id="contadorTexto">0 caracteres</span>
-            </div>
-          </div>
-        </fieldset>
-
-        <!-- SECCIÓN 4: EVIDENCIA FOTOGRÁFICA -->
-        <fieldset class="seccion-formulario">
-          <legend class="leyenda-seccion">
-            <span class="numero-paso">4</span>
-            Evidencia Fotográfica
-          </legend>
-          <p class="nota-seccion">Adjuntar fotografías acelera el diagnóstico y la asignación del personal de mantenimiento.</p>
-
-          <div class="campo" id="campo-evidencias">
-            <label for="evidencias">Fotografías del daño (Opcional, máx. 3 fotos)</label>
-            
-            <div class="zona-subida" id="zonaSubida">
-              <input 
-                type="file" 
-                id="evidencias" 
-                name="evidencias" 
-                accept="image/jpeg,image/png,image/webp" 
-                multiple 
-                class="input-archivo-oculto">
-              
-              <div class="icono-subida" aria-hidden="true">
-                <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-                  <polyline points="17 8 12 3 7 8"/>
-                  <line x1="12" y1="3" x2="12" y2="15"/>
-                </svg>
-              </div>
-
-              <p class="texto-principal-subida">
-                <strong>Haz clic aquí para seleccionar imágenes</strong> o arrástralas a esta zona
-              </p>
-              <p class="texto-secundario-subida">
-                Formatos permitidos: JPG, PNG o WEBP. Máximo 3 imágenes, hasta 5 MB cada una.
-              </p>
-            </div>
-
-            <!-- Contenedor para visualización previa de fotos -->
-            <div class="galeria-previa" id="galeriaPrevia" aria-live="polite"></div>
-          </div>
-        </fieldset>
-
-        <!-- ACCIONES DEL FORMULARIO -->
-        <div class="acciones-formulario">
-          <button type="reset" class="boton boton-secundario" id="btnLimpiar">
-            Limpiar Formulario
-          </button>
-          <button type="submit" class="boton boton-primario" id="btnEnviar">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-              <line x1="22" y1="2" x2="11" y2="13"></line>
-              <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+        <nav id="main-nav" class="main-nav" aria-label="Navegación principal">
+          <a href="index.html" aria-current="page">Inicio</a>
+          <a href="incidencias.html">Incidencias</a>
+          <a href="seguimiento.html">Seguimiento</a>
+          <a href="ayuda.html">Cómo reportar</a>
+          <a class="nav-account" href="login.html" id="account-link">Iniciar sesión</a>
+          <button id="logout" class="text-button" hidden>Salir</button>
+          <a href="reporte.html" class="button button-small">
+            <svg
+              class="icon"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.7"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              aria-hidden="true"
+            >
+              <path d="M12 5v14M5 12h14" />
             </svg>
-            Enviar Reporte de Incidencia
-          </button>
+            Reportar
+          </a>
+        </nav>
+      </div>
+    </header>
+
+    <!-- Contenido de la página -->
+    <main id="contenido" class="wrap main-content">
+      <!-- Bienvenida al portal -->
+      <section class="hero">
+        <div class="hero-copy">
+          <p class="eyebrow light">CUIDEMOS NUESTRO CAMPUS</p>
+          <h1>
+            Tu reporte hace
+            <br />
+            la diferencia.
+          </h1>
+          <p>
+            Un espacio para comunicar problemas de infraestructura y seguir su atención,
+            paso a paso.
+          </p>
+          <div class="hero-actions">
+            <a class="button button-white" href="reporte.html">
+              Reportar incidencia
+              <svg
+                class="icon"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.7"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                aria-hidden="true"
+              >
+                <path d="M5 12h14m-6-6 6 6-6 6" />
+              </svg>
+            </a>
+            <a class="hero-link" href="seguimiento.html">Consultar un código</a>
+          </div>
+          <span class="hero-note">
+            <svg
+              class="icon"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.7"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              aria-hidden="true"
+            >
+              <path d="m5 12 4 4L19 6" />
+            </svg>
+            Puedes reportar sin crear una cuenta
+          </span>
         </div>
+        <div class="hero-visual">
+          <svg
+            class="campus-art"
+            viewBox="0 0 480 340"
+            role="img"
+            aria-label="Ilustración de edificios del campus"
+          >
+            <defs>
+              <pattern id="grid" width="32" height="32" patternUnits="userSpaceOnUse">
+                <path d="M32 0H0V32" fill="none" stroke="white" opacity=".09" />
+              </pattern>
+            </defs>
+            <rect width="480" height="340" fill="url(#grid)" />
+            <g transform="translate(45 44)">
+              <path d="m0 181 195-105 195 105-195 106Z" fill="#fff" opacity=".12" />
+              <path
+                d="m52 151 144-77 144 77-144 77Z"
+                fill="none"
+                stroke="#fff"
+                opacity=".35"
+              />
+              <g fill="#fff1e7" stroke="#a22929" stroke-width="2">
+                <path d="m58 120 74-40 74 40-74 40Z" />
+                <path d="M58 120v62l74 40v-62Z" />
+                <path d="m132 160 74-40v62l-74 40Z" />
+                <path d="m210 104 64-35 64 35-64 35Z" />
+                <path d="M210 104v47l64 35v-47Z" />
+                <path d="m274 139 64-35v47l-64 35Z" />
+              </g>
+              <g fill="#a22929">
+                <path
+                  d="m74 143 12 6v17l-12-6Zm25 13 12 6v17l-12-6Zm48 20 12-6v17l-12 6Zm25-13 12-6v17l-12 6Zm53-37 12 6v13l-12-6Zm25 13 12 6v13l-12-6Z"
+                />
+              </g>
+              <g fill="#f8d7b4">
+                <circle cx="41" cy="199" r="14" />
+                <circle cx="341" cy="189" r="17" />
+                <circle cx="297" cy="231" r="12" />
+              </g>
+              <g stroke="white" stroke-width="2" opacity=".65">
+                <path d="M41 199v23m300-33v28m-44 14v21" />
+              </g>
+              <circle cx="187" cy="45" r="27" fill="white" />
+              <path
+                d="m175 45 8 8 16-17"
+                fill="none"
+                stroke="#a60000"
+                stroke-width="4"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              />
+            </g>
+          </svg>
+          <div class="campus-caption">
+            <span class="live-dot"></span>
+            Facultad Multidisciplinaria Oriental
+            <small>Ilustración del campus</small>
+          </div>
+        </div>
+      </section>
 
-      </form>
-    </div>
-  </main>
+      <!-- Accesos rápidos -->
+      <section class="quick-paths" aria-label="Accesos rápidos">
+        <a href="reporte.html">
+          <span class="path-icon">
+            <svg
+              class="icon"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.7"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              aria-hidden="true"
+            >
+              <path d="M12 5v14M5 12h14" />
+            </svg>
+          </span>
+          <div>
+            <h2>Reporta un problema</h2>
+            <p>Cuéntanos qué pasó y dónde.</p>
+          </div>
+          <svg
+            class="icon"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.7"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            aria-hidden="true"
+          >
+            <path d="M5 12h14m-6-6 6 6-6 6" />
+          </svg>
+        </a>
+        <a href="seguimiento.html">
+          <span class="path-icon">
+            <svg
+              class="icon"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.7"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              aria-hidden="true"
+            >
+              <circle cx="10.5" cy="10.5" r="6.5" />
+              <path d="m16 16 4 4" />
+            </svg>
+          </span>
+          <div>
+            <h2>Revisa el seguimiento</h2>
+            <p>Consulta el historial con tu código.</p>
+          </div>
+          <svg
+            class="icon"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.7"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            aria-hidden="true"
+          >
+            <path d="M5 12h14m-6-6 6 6-6 6" />
+          </svg>
+        </a>
+        <a href="incidencias.html?vista=mapa">
+          <span class="path-icon">
+            <svg
+              class="icon"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.7"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              aria-hidden="true"
+            >
+              <path d="M19 10c0 5-7 11-7 11S5 15 5 10a7 7 0 1 1 14 0Z" />
+              <circle cx="12" cy="10" r="2" />
+            </svg>
+          </span>
+          <div>
+            <h2>Explora el campus</h2>
+            <p>Ubica las incidencias de ejemplo.</p>
+          </div>
+          <svg
+            class="icon"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.7"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            aria-hidden="true"
+          >
+            <path d="M5 12h14m-6-6 6 6-6 6" />
+          </svg>
+        </a>
+      </section>
 
-  <footer class="pie-pagina">
-    <div class="contenido-pie">
-      <p><strong>Universidad de El Salvador</strong> — Unidad de Servicios Generales y Mantenimiento</p>
-      <p class="pie-secundario">Canal institucional de recepción de incidencias de infraestructura del campus universitario.</p>
-    </div>
-  </footer>
+      <!-- Incidencias recientes -->
+      <section class="section">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">VISIBILIDAD DEL PROCESO</p>
+            <h2>Lo que pasa en el campus</h2>
+            <p>Una vista pública, sin datos personales.</p>
+          </div>
+          <a class="text-link" href="incidencias.html">
+            Ver incidencias
+            <svg
+              class="icon"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.7"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              aria-hidden="true"
+            >
+              <path d="M5 12h14m-6-6 6 6-6 6" />
+            </svg>
+          </a>
+        </div>
+        <div id="home-incidents" class="incident-list">
+          <p class="empty-state" role="status">Cargando incidencias…</p>
+        </div>
+      </section>
 
-  <script src="scripts/index.js"></script>
-</body>
+      <!-- Enlace a la guía -->
+      <section class="orientation-banner">
+        <span class="path-icon">
+          <svg
+            class="icon"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.7"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            aria-hidden="true"
+          >
+            <path d="M12 5v15M3 4c3-1 6-1 9 1 3-2 6-2 9-1v15c-3-1-6-1-9 1-3-2-6-2-9-1Z" />
+          </svg>
+        </span>
+        <div>
+          <h2>Un reporte claro ayuda a atender mejor.</h2>
+          <p>Revisa qué información incluir y cómo consultar una respuesta.</p>
+        </div>
+        <a class="button button-outline" href="ayuda.html">
+          Cómo reportar
+          <svg
+            class="icon"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.7"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            aria-hidden="true"
+          >
+            <path d="M5 12h14m-6-6 6 6-6 6" />
+          </svg>
+        </a>
+      </section>
+    </main>
+
+    <!-- Pie de página -->
+    <footer class="site-footer">
+      <div class="wrap footer-inner">
+        <div>
+          <strong>Un campus mejor empieza contigo.</strong>
+          <p>Infraestructura · Facultad Multidisciplinaria Oriental, UES</p>
+        </div>
+        <a href="ayuda.html">
+          ¿Necesitas orientación?
+          <svg
+            class="icon"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.7"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            aria-hidden="true"
+          >
+            <path d="M5 12h14m-6-6 6 6-6 6" />
+          </svg>
+        </a>
+      </div>
+    </footer>
+
+    <!-- Mensajes temporales -->
+    <div class="toast" id="toast" role="status" hidden></div>
+
+    <!-- Funciones de la página -->
+    <script type="module" src="scripts/index.js"></script>
+  </body>
 </html>

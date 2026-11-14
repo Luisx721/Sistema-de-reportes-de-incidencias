@@ -1,0 +1,700 @@
+<!doctype html>
+<html lang="es">
+  <!-- Configuración de la página -->
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#a60000" />
+    <title>Administración del sistema | Reportes UES</title>
+    <link rel="icon" href="files/images/logo.png" />
+    <link rel="stylesheet" href="styles/index.css" />
+    <style>
+      /* Estilos complementarios para administración */
+      .admin-tabs {
+        margin-bottom: 28px;
+        display: inline-flex;
+        flex-wrap: wrap;
+      }
+      .admin-toolbar {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: flex-end;
+        justify-content: space-between;
+        gap: 16px;
+        margin-bottom: 18px;
+      }
+      .admin-filters {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 14px;
+        align-items: flex-end;
+        flex: 1;
+        min-width: 280px;
+      }
+      .admin-filters .field {
+        margin-bottom: 0;
+        flex: 1;
+        min-width: 160px;
+      }
+      .admin-filters .search-field {
+        flex: 1.6;
+        min-width: 220px;
+      }
+      .table-wrapper {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        background: var(--paper);
+        border: 1px solid var(--line);
+        border-radius: var(--radius);
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+      }
+      .admin-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 0.88rem;
+        text-align: left;
+        min-width: 680px;
+      }
+      .admin-table th,
+      .admin-table td {
+        padding: 14px 18px;
+        border-bottom: 1px solid var(--line);
+        vertical-align: middle;
+      }
+      .admin-table th {
+        background: #fbfcfd;
+        color: var(--muted);
+        font-size: 0.72rem;
+        font-weight: 700;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+      .admin-table tbody tr:last-child td {
+        border-bottom: none;
+      }
+      .admin-table tbody tr:hover td {
+        background: #fdfafa;
+      }
+      .table-actions {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        white-space: nowrap;
+      }
+      .empty-state {
+        text-align: center;
+        padding: 48px 24px;
+        color: var(--muted);
+        font-size: 0.95rem;
+        background: var(--paper);
+        border: 1px solid var(--line);
+        border-radius: var(--radius);
+      }
+      .catalog-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 16px;
+        margin-bottom: 20px;
+      }
+      .backup-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        gap: 24px;
+      }
+      .backup-card {
+        padding: 28px;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        gap: 20px;
+      }
+      .backup-card h3 {
+        margin-bottom: 8px;
+        font-size: 1.15rem;
+      }
+      .backup-card p {
+        margin-bottom: 0;
+        font-size: 0.9rem;
+      }
+      /* Diálogos modales nativos */
+      dialog.modal {
+        border: 1px solid var(--line);
+        border-radius: var(--radius);
+        background: var(--paper);
+        color: var(--ink);
+        padding: 30px;
+        box-shadow: 0 18px 50px rgba(0, 0, 0, 0.18);
+        max-width: min(520px, calc(100% - 32px));
+        width: 100%;
+        margin: auto;
+      }
+      dialog.modal::backdrop {
+        background: rgba(32, 37, 44, 0.48);
+        backdrop-filter: blur(2px);
+      }
+      .modal-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 20px;
+      }
+      .modal-header h2 {
+        margin: 0;
+        font-size: 1.3rem;
+      }
+      .modal-close-btn {
+        background: none;
+        border: none;
+        color: var(--muted);
+        font-size: 1.5rem;
+        line-height: 1;
+        padding: 4px 8px;
+        border-radius: 6px;
+      }
+      .modal-close-btn:hover {
+        color: var(--ink);
+        background: #f1f2f4;
+      }
+      .modal-actions {
+        display: flex;
+        justify-content: flex-end;
+        align-items: center;
+        gap: 12px;
+        margin-top: 24px;
+      }
+      .dialog-alert {
+        padding: 14px 16px;
+        background: #fff8f0;
+        border: 1px solid #f9deb7;
+        border-radius: 8px;
+        color: #8c5b0e;
+        font-size: 0.86rem;
+        margin-bottom: 18px;
+      }
+      @media (max-width: 768px) {
+        .admin-toolbar {
+          flex-direction: column;
+          align-items: stretch;
+        }
+        .admin-filters {
+          flex-direction: column;
+          align-items: stretch;
+        }
+        .admin-filters .field {
+          width: 100%;
+        }
+        .catalog-header {
+          flex-direction: column;
+          align-items: stretch;
+        }
+        dialog.modal {
+          padding: 22px 18px;
+        }
+      }
+    </style>
+  </head>
+  <body data-page="admin">
+    <!-- Acceso directo al contenido -->
+    <a class="skip-link" href="#contenido">Saltar al contenido</a>
+
+    <!-- Aviso de demostración -->
+    <div class="demo-bar">
+      <div class="wrap">
+        <span>
+          <i></i>
+          PROTOTIPO INTERACTIVO
+        </span>
+        <span>Módulo de administración · Cambios almacenados en memoria</span>
+      </div>
+    </div>
+
+    <!-- Encabezado y navegación -->
+    <header class="site-header">
+      <div class="wrap header-inner">
+        <a class="brand" href="index.html" aria-label="Sistema de Reportes UES, inicio">
+          <img src="files/images/logo.png" alt="Logo del sistema" />
+          <span>
+            <small>UNIVERSIDAD DE EL SALVADOR</small>
+            <strong>
+              Reportes
+              <span class="brand-accent">UES</span>
+            </strong>
+          </span>
+        </a>
+        <button
+          class="menu-toggle"
+          aria-controls="main-nav"
+          aria-expanded="false"
+          aria-label="Abrir menú"
+        >
+          <svg
+            class="icon"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.7"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            aria-hidden="true"
+          >
+            <path d="M4 6h16M4 12h16M4 18h16" />
+          </svg>
+        </button>
+        <nav id="main-nav" class="main-nav" aria-label="Navegación principal">
+          <a href="index.html">Inicio</a>
+          <a href="incidencias.html">Incidencias</a>
+          <a href="seguimiento.html">Seguimiento</a>
+          <a href="admin.html" aria-current="page">Administración</a>
+          <span class="nav-account" id="account-link" title="Sesión activa · Administrador">Administrador</span>
+          <button id="logout" class="text-button" type="button">Cerrar sesión</button>
+        </nav>
+      </div>
+    </header>
+
+    <!-- Contenido de la página -->
+    <main id="contenido" class="wrap main-content">
+      <header class="page-heading">
+        <p class="eyebrow">PANEL DE CONTROL</p>
+        <h1>Administración del campus</h1>
+        <p>
+          Gestión centralizada de cuentas de usuario, catálogos del sistema y
+          respaldo de datos de infraestructura.
+        </p>
+      </header>
+
+      <!-- Selector de secciones principales -->
+      <nav class="view-switch admin-tabs" role="tablist" aria-label="Secciones del panel de administración">
+        <button
+          type="button"
+          role="tab"
+          id="tab-cuentas-btn"
+          aria-selected="true"
+          aria-controls="section-cuentas"
+          class="tab-trigger"
+        >
+          Cuentas
+        </button>
+        <button
+          type="button"
+          role="tab"
+          id="tab-catalogos-btn"
+          aria-selected="false"
+          aria-controls="section-catalogos"
+          class="tab-trigger"
+        >
+          Catálogos
+        </button>
+        <button
+          type="button"
+          role="tab"
+          id="tab-respaldo-btn"
+          aria-selected="false"
+          aria-controls="section-respaldo"
+          class="tab-trigger"
+        >
+          Respaldo y restauración
+        </button>
+      </nav>
+
+      <!-- 1. SECCIÓN CUENTAS (RF-22) -->
+      <section id="section-cuentas" role="tabpanel" aria-labelledby="tab-cuentas-btn">
+        <div class="admin-toolbar">
+          <div class="admin-filters">
+            <div class="field search-field">
+              <label for="account-search">Buscar cuenta</label>
+              <input
+                type="search"
+                id="account-search"
+                placeholder="Buscar por nombre o usuario..."
+                autocomplete="off"
+              />
+            </div>
+            <div class="field">
+              <label for="account-filter-role">Perfil</label>
+              <select id="account-filter-role">
+                <option value="">Todos los perfiles</option>
+                <option value="Ordenanza">Ordenanza</option>
+                <option value="Jefatura">Jefatura</option>
+                <option value="Mantenimiento">Mantenimiento</option>
+                <option value="Desarrollo Físico">Desarrollo Físico</option>
+                <option value="Autoridad">Autoridad</option>
+                <option value="Administrador">Administrador</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="account-filter-status">Estado</label>
+              <select id="account-filter-status">
+                <option value="">Todos los estados</option>
+                <option value="activa">Activa</option>
+                <option value="desactivada">Desactivada</option>
+              </select>
+            </div>
+          </div>
+          <div>
+            <button type="button" id="btn-new-account" class="button button-small">
+              <svg
+                class="icon"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.7"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                aria-hidden="true"
+              >
+                <path d="M12 5v14M5 12h14" />
+              </svg>
+              Nueva cuenta
+            </button>
+          </div>
+        </div>
+
+        <!-- Metadatos de búsqueda y resultados -->
+        <div class="results-meta">
+          <p id="accounts-count" role="status">Cargando cuentas...</p>
+          <button type="button" class="text-button" id="btn-clear-account-filters">
+            Limpiar filtros
+          </button>
+        </div>
+
+        <!-- Tabla de cuentas -->
+        <div class="table-wrapper" id="accounts-table-container">
+          <table class="admin-table">
+            <thead>
+              <tr>
+                <th scope="col">Nombre</th>
+                <th scope="col">Usuario</th>
+                <th scope="col">Perfil</th>
+                <th scope="col">Área</th>
+                <th scope="col">Estado</th>
+                <th scope="col">Acciones</th>
+              </tr>
+            </thead>
+            <tbody id="accounts-table-body">
+              <!-- Renderizado desde admin.js -->
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Estado vacío -->
+        <div id="accounts-empty-state" class="empty-state" hidden>
+          <p>No hay resultados que coincidan.</p>
+        </div>
+      </section>
+
+      <!-- 2. SECCIÓN CATÁLOGOS (RF-23) -->
+      <section id="section-catalogos" role="tabpanel" aria-labelledby="tab-catalogos-btn" hidden>
+        <div class="catalog-header">
+          <div class="view-switch" role="tablist" aria-label="Tipos de catálogo">
+            <button
+              type="button"
+              role="tab"
+              id="subtab-categories-btn"
+              aria-selected="true"
+              aria-controls="catalog-table-container"
+              class="subtab-trigger"
+            >
+              Categorías de daño
+            </button>
+            <button
+              type="button"
+              role="tab"
+              id="subtab-locations-btn"
+              aria-selected="false"
+              aria-controls="catalog-table-container"
+              class="subtab-trigger"
+            >
+              Ubicaciones
+            </button>
+          </div>
+          <button type="button" id="btn-new-catalog-item" class="button button-small">
+            <svg
+              class="icon"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.7"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              aria-hidden="true"
+            >
+              <path d="M12 5v14M5 12h14" />
+            </svg>
+            <span id="catalog-add-label">Agregar categoría</span>
+          </button>
+        </div>
+
+        <!-- Metadatos de catálogo -->
+        <div class="results-meta">
+          <p id="catalog-count" role="status">Cargando elementos...</p>
+        </div>
+
+        <!-- Tabla de elementos del catálogo -->
+        <div class="table-wrapper" id="catalog-table-container">
+          <table class="admin-table">
+            <thead>
+              <tr>
+                <th scope="col">Nombre del registro</th>
+                <th scope="col">Tipo de catálogo</th>
+                <th scope="col">Estado</th>
+                <th scope="col">Acciones</th>
+              </tr>
+            </thead>
+            <tbody id="catalog-table-body">
+              <!-- Renderizado desde admin.js -->
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Estado vacío -->
+        <div id="catalog-empty-state" class="empty-state" hidden>
+          <p>No hay resultados que coincidan.</p>
+        </div>
+      </section>
+
+      <!-- 3. SECCIÓN RESPALDO Y RESTAURACIÓN (RNF-10) -->
+      <section id="section-respaldo" role="tabpanel" aria-labelledby="tab-respaldo-btn" hidden>
+        <div class="backup-grid">
+          <!-- Tarjeta de Respaldo -->
+          <article class="surface backup-card">
+            <div>
+              <p class="eyebrow">COPIA DE SEGURIDAD</p>
+              <h3>Generar respaldo</h3>
+              <p>
+                Descarga una copia de seguridad en formato JSON que contiene el estado
+                actual de las cuentas, catálogos e incidencias del campus.
+              </p>
+            </div>
+            <div>
+              <button type="button" id="btn-generate-backup" class="button">
+                <svg
+                  class="icon"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="1.7"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  aria-hidden="true"
+                >
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3" />
+                </svg>
+                Generar respaldo
+              </button>
+            </div>
+          </article>
+
+          <!-- Tarjeta de Restauración -->
+          <article class="surface backup-card">
+            <div>
+              <p class="eyebrow">RECUPERACIÓN DE DATOS</p>
+              <h3>Restaurar sistema</h3>
+              <p>
+                Restaura la información del sistema al punto base de demostración.
+                Esta acción requiere confirmación expresa.
+              </p>
+            </div>
+            <div>
+              <button type="button" id="btn-open-restore" class="button button-outline">
+                <svg
+                  class="icon"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="1.7"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  aria-hidden="true"
+                >
+                  <path d="M3 12a9 9 0 0 1 15-6.7L21 8M21 3v5h-5M21 12a9 9 0 0 1-15 6.7L3 16M3 21v-5h5" />
+                </svg>
+                Restaurar
+              </button>
+            </div>
+          </article>
+        </div>
+      </section>
+    </main>
+
+    <!-- Pie de página -->
+    <footer class="site-footer">
+      <div class="wrap footer-inner">
+        <div>
+          <strong>Un campus mejor empieza contigo.</strong>
+          <p>Módulo de Administración · Facultad Multidisciplinaria Oriental, UES</p>
+        </div>
+        <a href="ayuda.html">
+          ¿Necesitas orientación?
+          <svg
+            class="icon"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.7"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            aria-hidden="true"
+          >
+            <path d="M5 12h14m-6-6 6 6-6 6" />
+          </svg>
+        </a>
+      </div>
+    </footer>
+
+    <!-- MODAL: CREAR / EDITAR CUENTA -->
+    <dialog class="modal" id="modal-account" aria-labelledby="modal-account-title">
+      <div class="modal-header">
+        <h2 id="modal-account-title">Nueva cuenta</h2>
+        <button type="button" class="modal-close-btn" data-close-modal="modal-account" aria-label="Cerrar modal">
+          &times;
+        </button>
+      </div>
+      <form id="form-account" novalidate>
+        <input type="hidden" id="account-id" value="" />
+        <div class="field">
+          <label for="account-name">Nombre completo</label>
+          <input type="text" id="account-name" placeholder="Ej. Carlos Alberto Gómez" />
+          <span class="field-error" id="account-name-error"></span>
+        </div>
+        <div class="field">
+          <label for="account-username">Usuario</label>
+          <input type="text" id="account-username" placeholder="Ej. cgomez" />
+          <span class="field-error" id="account-username-error"></span>
+        </div>
+        <div class="field">
+          <label for="account-role">Perfil</label>
+          <select id="account-role">
+            <option value="">Selecciona un perfil</option>
+            <option value="Ordenanza">Ordenanza</option>
+            <option value="Jefatura">Jefatura</option>
+            <option value="Mantenimiento">Mantenimiento</option>
+            <option value="Desarrollo Físico">Desarrollo Físico</option>
+            <option value="Autoridad">Autoridad</option>
+            <option value="Administrador">Administrador</option>
+          </select>
+          <span class="field-error" id="account-role-error"></span>
+        </div>
+        <div class="field">
+          <label for="account-area">Área de trabajo</label>
+          <input type="text" id="account-area" placeholder="Ej. Servicios Generales" />
+          <span class="field-error" id="account-area-error"></span>
+        </div>
+        <div class="modal-actions">
+          <button type="button" class="button button-quiet" data-close-modal="modal-account">
+            Cancelar
+          </button>
+          <button type="submit" class="button">Guardar cuenta</button>
+        </div>
+      </form>
+    </dialog>
+
+    <!-- MODAL: CONFIRMAR DESACTIVAR CUENTA -->
+    <dialog class="modal" id="modal-deactivate-account" aria-labelledby="modal-deact-acc-title">
+      <div class="modal-header">
+        <h2 id="modal-deact-acc-title">Desactivar cuenta</h2>
+        <button type="button" class="modal-close-btn" data-close-modal="modal-deactivate-account" aria-label="Cerrar modal">
+          &times;
+        </button>
+      </div>
+      <div class="dialog-alert">
+        <strong>Aviso importante:</strong> La cuenta no podrá iniciar sesión en el sistema.
+        <strong>El historial de incidencias y acciones de este usuario se conservará íntegramente.</strong>
+      </div>
+      <p>
+        ¿Confirmas la desactivación de la cuenta de
+        <strong id="deactivate-account-name-label"></strong>?
+      </p>
+      <div class="modal-actions">
+        <button type="button" class="button button-quiet" data-close-modal="modal-deactivate-account">
+          Cancelar
+        </button>
+        <button type="button" id="btn-confirm-deactivate-account" class="button">
+          Desactivar cuenta
+        </button>
+      </div>
+    </dialog>
+
+    <!-- MODAL: CREAR / EDITAR CATÁLOGO -->
+    <dialog class="modal" id="modal-catalog" aria-labelledby="modal-catalog-title">
+      <div class="modal-header">
+        <h2 id="modal-catalog-title">Nueva categoría</h2>
+        <button type="button" class="modal-close-btn" data-close-modal="modal-catalog" aria-label="Cerrar modal">
+          &times;
+        </button>
+      </div>
+      <form id="form-catalog" novalidate>
+        <input type="hidden" id="catalog-id" value="" />
+        <input type="hidden" id="catalog-type" value="category" />
+        <div class="field">
+          <label for="catalog-name" id="catalog-name-label">Nombre del elemento</label>
+          <input type="text" id="catalog-name" placeholder="Ej. Redes y conectividad" />
+          <span class="field-error" id="catalog-name-error"></span>
+        </div>
+        <div class="modal-actions">
+          <button type="button" class="button button-quiet" data-close-modal="modal-catalog">
+            Cancelar
+          </button>
+          <button type="submit" class="button">Guardar</button>
+        </div>
+      </form>
+    </dialog>
+
+    <!-- MODAL: CONFIRMAR DESACTIVAR ÍTEM DE CATÁLOGO -->
+    <dialog class="modal" id="modal-deactivate-catalog" aria-labelledby="modal-deact-cat-title">
+      <div class="modal-header">
+        <h2 id="modal-deact-cat-title">Desactivar registro del catálogo</h2>
+        <button type="button" class="modal-close-btn" data-close-modal="modal-deactivate-catalog" aria-label="Cerrar modal">
+          &times;
+        </button>
+      </div>
+      <div class="dialog-alert">
+        <strong>Aviso:</strong> Este elemento ya no estará disponible para nuevos reportes,
+        pero <strong>el historial de reportes asociados se conservará intacto</strong>.
+      </div>
+      <p>
+        ¿Confirmas la desactivación de <strong id="deactivate-catalog-name-label"></strong>?
+      </p>
+      <div class="modal-actions">
+        <button type="button" class="button button-quiet" data-close-modal="modal-deactivate-catalog">
+          Cancelar
+        </button>
+        <button type="button" id="btn-confirm-deactivate-catalog" class="button">
+          Desactivar elemento
+        </button>
+      </div>
+    </dialog>
+
+    <!-- MODAL: CONFIRMAR RESTAURACIÓN (RNF-10) -->
+    <dialog class="modal" id="modal-restore" aria-labelledby="modal-restore-title">
+      <div class="modal-header">
+        <h2 id="modal-restore-title">Confirmar restauración</h2>
+        <button type="button" class="modal-close-btn" data-close-modal="modal-restore" aria-label="Cerrar modal">
+          &times;
+        </button>
+      </div>
+      <div class="dialog-alert">
+        <strong>Advertencia:</strong> Esta acción <strong>reemplaza todos los datos actuales</strong>
+        por la configuración inicial de ejemplo. Los cambios no guardados se perderán.
+      </div>
+      <p>
+        ¿Deseas proceder con la restauración de cuentas y catálogos a los valores predeterminados?
+      </p>
+      <div class="modal-actions">
+        <button type="button" class="button button-quiet" data-close-modal="modal-restore">
+          Cancelar
+        </button>
+        <button type="button" id="btn-confirm-restore" class="button">
+          Confirmar restauración
+        </button>
+      </div>
+    </dialog>
+
+    <!-- Mensajes temporales (Toast) -->
+    <div class="toast" id="toast" role="status" hidden></div>
+
+    <!-- Comportamiento de la página -->
+    <script src="scripts/admin.js"></script>
+  </body>
+</html>

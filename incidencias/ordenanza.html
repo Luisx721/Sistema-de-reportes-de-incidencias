@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#a60000"/>
+    <title>Gestión de sector - Ordenanza | Reportes UES</title>
+    <link rel="icon" href="files/images/logo.png"/>
+    <link rel="stylesheet" href="styles/index.css"/> <!--CSS heredado-->
+    <link rel="stylesheet" href="styles/ordenanza.css"/> <!--CSS propio de ordenanza-->
+</head>
+<body data-page="ordenanza">
+    
+    <!--Acceso directo al contenido-->
+    <a class="skip-link" href="#contenido">Saltar al contenido</a>
+
+    <!--Aviso de demostración-->
+    <div class="demo-bar">
+      <div class="wrap">
+        <span>
+          <i></i>
+          PROTOTIPO INTERACTIVO
+        </span>
+        <span>Datos de ejemplo · Los cambios se guardan solo en este navegador</span>
+      </div>
+    </div>
+
+    <!--Encabezado y navegación-->
+    <header class="site-header">
+      <div class="wrap header-inner">
+        <a class="brand" href="index.html" aria-label="Sistema de Reportes UES, inicio">
+          <img src="files/images/logo.png" alt="Logo del sistema" />
+          <span>
+            <small>UNIVERSIDAD DE EL SALVADOR</small>
+            <strong>
+              Reportes
+              <span class="brand-accent">UES</span>
+            </strong>
+          </span>
+        </a>
+        <button
+          class="menu-toggle"
+          aria-controls="main-nav"
+          aria-expanded="false"
+          aria-label="Abrir menú"
+        >
+          <svg
+            class="icon"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.7"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            aria-hidden="true"
+          >
+            <path d="M4 6h16M4 12h16M4 18h16" />
+          </svg>
+        </button>
+        <nav id="main-nav" class="main-nav" aria-label="Navegación principal">
+          <a href="index.html">Inicio</a>
+          <a href="incidencias.html">Incidencias</a>
+          <a href="seguimiento.html">Seguimiento</a>
+          <a href="ordenanza.html" aria-current="page">Mi Sector</a>
+          <span class="nav-account" id="account-link" title="Sesión activa · Personal de Ordenanza">
+            Ordenanza
+          </span>
+          <button id="logout" class="text-button" type="button">Cerrar sesión</button>
+        </nav>
+      </div>
+    </header>
+
+    <!-- Contenido de la página -->
+    <main id="contenido" class="wrap main-content">
+      <header class="page-heading">
+        <p class="eyebrow" id="sector-eyebrow">CONTROL DE SECTOR · ORDENANZA</p>
+        <h1>Panel de Ordenanza</h1>
+        <p>
+          Registro directo de incidencias detectadas en tu sector asignado y consulta
+          del estado e historial de atención de los reportes de tu área.
+        </p>
+      </header>
+
+      <!-- Resumen de reportes del área asignada -->
+      <section class="kpi-strip" aria-label="Resumen de reportes de mi área">
+        <article class="surface kpi-card">
+          <span>Recibidos</span>
+          <strong id="kpi-recibido">0</strong>
+        </article>
+        <article class="surface kpi-card">
+          <span>En proceso</span>
+          <strong id="kpi-proceso">0</strong>
+        </article>
+        <article class="surface kpi-card">
+          <span>En espera mat./aut.</span>
+          <strong id="kpi-espera">0</strong>
+        </article>
+        <article class="surface kpi-card">
+          <span>Finalizados</span>
+          <strong id="kpi-finalizados">0</strong>
+        </article>
+      </section>
+
+      <!-- Selector de secciones principales -->
+      <nav class="view-switch admin-tabs" role="tablist" aria-label="Acciones de ordenanza">
+        <button
+          type="button"
+          role="tab"
+          id="tab-mis-reportes-btn"
+          aria-selected="true"
+          aria-controls="section-mis-reportes"
+          class="tab-trigger"
+        >
+          Reportes de mi área
+        </button>
+        <button
+          type="button"
+          role="tab"
+          id="tab-nuevo-reporte-btn"
+          aria-selected="false"
+          aria-controls="section-nuevo-reporte"
+          class="tab-trigger"
+        >
+          + Registrar daño en sector
+        </button>
+      </nav>
+
+      <!-- seccion de consulta de reportes por area -->
+      <section id="section-mis-reportes" role="tabpanel" aria-labelledby="tab-mis-reportes-btn">
+        <div class="admin-toolbar">
+          <div class="admin-filters">
+            <div class="field search-field">
+              <label for="area-search">Buscar en mi área</label>
+              <input
+                type="search"
+                id="area-search"
+                placeholder="Buscar por código o descripción..."
+                autocomplete="off"
+              />
+            </div>
+            <div class="field">
+              <label for="area-filter-category">Categoría</label>
+              <select id="area-filter-category">
+                <option value="">Todas las categorías</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="area-filter-location">Ubicación</label>
+              <select id="area-filter-location">
+                <option value="">Todas las ubicaciones</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="area-filter-status">Estado vigente</label>
+              <select id="area-filter-status">
+                <option value="">Todos los estados</option>
+                <option value="Recibido">Recibido</option>
+                <option value="En proceso">En proceso</option>
+                <option value="En espera de materiales/autorización">
+                  En espera de materiales/autorización
+                </option>
+                <option value="Resuelto">Resuelto</option>
+                <option value="Rechazado/Cerrado">Rechazado/Cerrado</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <!-- Resultados del filtro -->
+        <div class="results-meta">
+          <p id="area-count" role="status">Cargando reportes del área...</p>
+          <button type="button" class="text-button" id="btn-clear-area-filters">
+            Limpiar filtros
+          </button>
+        </div>
+
+        <!-- Tabla de reportes exclusivos del área asignada  -->
+        <div class="table-wrapper" id="area-table-container">
+          <table class="admin-table">
+            <thead>
+              <tr>
+                <th scope="col">Código</th>
+                <th scope="col">Fecha</th>
+                <th scope="col">Categoría</th>
+                <th scope="col">Ubicación</th>
+                <th scope="col">Estado vigente</th>
+                <th scope="col">Acciones</th>
+              </tr>
+            </thead>
+            <tbody id="area-table-body">
+              <!-- Renderizado desde JavaScript -->
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Estado vacío -->
+        <div id="area-empty-state" class="empty-state" hidden>
+          <p>No hay reportes registrados para tu área con los filtros actuales.</p>
+        </div>
+      </section>
+
+      <!-- seccion de registro de incidencia por ordenanza -->
+      <section id="section-nuevo-reporte" role="tabpanel" aria-labelledby="tab-nuevo-reporte-btn" hidden>
+        <article class="surface form-panel">
+          <div class="form-panel-header">
+            <h2>Registrar incidencia de infraestructura</h2>
+            <p>
+              El reporte quedará vinculado automáticamente a tu área asignada y recibirá
+              un código único de seguimiento en estado <strong>Recibido</strong>.
+            </p>
+          </div>
+
+          <form id="form-ordenanza-report" novalidate>
+            <div class="form-grid-2">
+              <!-- Área solicitante obligatoria (RF-05) -->
+              <div class="field">
+                <label for="ord-area">Área solicitante (asignada a tu perfil)</label>
+                <input
+                  type="text"
+                  id="ord-area"
+                  readonly
+                />
+              </div>
+
+              <!-- Categoría del catálogo  -->
+              <div class="field">
+                <label for="ord-category">Categoría del daño *</label>
+                <select id="ord-category" required>
+                  <option value="">Selecciona una categoría</option>
+                </select>
+                <span class="field-error" id="ord-category-error"></span>
+              </div>
+
+              <!-- Ubicación del catálogo -->
+              <div class="field">
+                <label for="ord-location">Ubicación física *</label>
+                <select id="ord-location" required>
+                  <option value="">Selecciona una ubicación</option>
+                </select>
+                <span class="field-error" id="ord-location-error"></span>
+              </div>
+
+              <!-- Referencia exacta -->
+              <div class="field">
+                <label for="ord-reference">Referencia exacta (aula, pasillo, nivel)</label>
+                <input
+                  type="text"
+                  id="ord-reference"
+                  placeholder="Ej. Aula 104, pasillo norte, sanitarios 2do nivel..."
+                />
+              </div>
+            </div>
+
+            <!-- Descripción >= 20 caracteres -->
+            <div class="field">
+              <label for="ord-description">Descripción del daño (mínimo 20 caracteres) *</label>
+              <textarea
+                id="ord-description"
+                placeholder="Describe detalladamente la falla observada en tu sector..."
+                required
+              ></textarea>
+              <span class="char-hint" id="ord-char-count">0 / 2000 (mínimo 20 caracteres)</span>
+              <span class="field-error" id="ord-description-error"></span>
+            </div>
+
+            <!-- Evidencia fotográfica opcional 1-3 fotos JPG/PNG <= 5 MB -->
+            <div class="field">
+                <label for="ord-photos">Evidencia fotográfica (opcional)</label>
+                <label class="dropzone" id="dropzone" for="ord-photos">
+                    <input
+                    type="file"
+                    id="ord-photos"
+                    accept="image/jpeg,image/png"
+                    multiple
+                    />
+                    <svg
+                    class="icon"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="1.7"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    aria-hidden="true"
+                    >
+                    <rect x="3" y="4" width="18" height="16" rx="2" />
+                    <circle cx="8.5" cy="9.5" r="1.5" />
+                    <path d="m21 16-5-5-6 6-2-2-5 5" />
+                    </svg>
+                    <p>
+                    <strong>Selecciona fotografías</strong> o arrástralas aquí
+                    </p>
+                    <small>Hasta 3 imágenes JPG o PNG · Máximo 5 MB por imagen</small>
+                </label>
+                <span class="field-error" id="ord-photos-error"></span>
+                <div id="ord-photo-previews" class="photo-previews"></div>
+                <div class="modal-actions">
+                <button type="reset" class="button button-quiet" id="btn-reset-ord-form">
+                Limpiar formulario
+                </button>
+                <button type="submit" class="button" id="btn-submit-ord-report">
+                Registrar incidencia
+                </button>
+            </div>
+          </form>
+          
+        </article>
+      </section>
+    </main>
+
+    <!-- Pie de página -->
+    <footer class="site-footer">
+      <div class="wrap footer-inner">
+        <div>
+          <strong>Un campus mejor empieza contigo.</strong>
+          <p>Módulo de Ordenanza · Facultad Multidisciplinaria Oriental, UES</p>
+        </div>
+        <a href="ayuda.html">
+          ¿Necesitas orientación?
+          <svg
+            class="icon"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.7"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            aria-hidden="true"
+          >
+            <path d="M5 12h14m-6-6 6 6-6 6" />
+          </svg>
+        </a>
+      </div>
+    </footer>
+
+    <!-- Detalle e historial del reporte del área  -->
+    <dialog class="modal" id="modal-area-detail" aria-labelledby="modal-area-detail-title">
+      <div class="modal-header">
+        <h2 id="modal-area-detail-title">Detalle e historial del reporte</h2>
+        <button
+          type="button"
+          class="modal-close-btn"
+          data-close-modal="modal-area-detail"
+          aria-label="Cerrar modal"
+        >
+          &times;
+        </button>
+      </div>
+
+      <dl class="detail-grid" id="area-detail-content">
+        <!-- Renderizado dinámicamente -->
+      </dl>
+
+      <div class="modal-actions">
+        <button type="button" class="button button-quiet" data-close-modal="modal-area-detail">
+          Cerrar
+        </button>
+        <button type="button" id="btn-ord-print-receipt" class="button button-outline">
+          <svg
+            class="icon"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.7"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            aria-hidden="true"
+          >
+            <path d="M6 9V2h12v7M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2" />
+            <rect x="6" y="14" width="12" height="8" />
+          </svg>
+          Comprobante PDF
+        </button>
+      </div>
+    </dialog>
+
+    <!-- Mensajes temporales -->
+    <div class="toast" id="toast" role="status" hidden></div>
+
+    <script type="module" src="scripts/ordenanza.js"></script>
+</body>
+</html>

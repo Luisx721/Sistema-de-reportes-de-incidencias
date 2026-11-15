@@ -9,11 +9,12 @@ import {
   endSession,
   formatDate,
   escapeHTML as esc,
+  badge,
 } from "./data.js";
 
 const $ = (selector) => document.querySelector(selector);
 
-//Transiciones válidas definidas
+// Transiciones válidas definidas
 const VALID_TRANSITIONS = {
   "Recibido": ["En proceso", "Rechazado/Cerrado"],
   "En proceso": ["En espera de materiales/autorización", "Resuelto"],
@@ -36,7 +37,7 @@ let activeDetailReport = null;
 let photoURLs = [];
 let toastTimer;
 
-//Sesión activa
+// Sesión activa
 const sessionUser = getSession();
 const CURRENT_USER = sessionUser?.name
   ? `${sessionUser.name} (Mantenimiento)`
@@ -51,7 +52,7 @@ $("#logout")?.addEventListener("click", () => {
   location.assign("index.html");
 });
 
-//Menú móvil (mismo comportamiento que index.js)
+// Menú móvil
 $(".menu-toggle")?.addEventListener("click", () => {
   const open = $("#main-nav").classList.toggle("open");
   $(".menu-toggle").setAttribute("aria-expanded", String(open));
@@ -65,7 +66,7 @@ document.addEventListener("keydown", (e) => {
   }
 });
 
-//Notificaciones temporales
+// Notificaciones temporales
 function showToast(msg) {
   const box = $("#toast");
   if (!box) return;
@@ -77,7 +78,7 @@ function showToast(msg) {
   }, 4000);
 }
 
-//Poblar filtros desde el catálogo compartido en data.js
+// Poblar filtros desde el catálogo compartido en data.js
 function populateCatalogFilters() {
   const catSelect = $("#order-filter-category");
   const locSelect = $("#order-filter-location");
@@ -99,17 +100,6 @@ function populateCatalogFilters() {
       locSelect.append(opt);
     }
   }
-}
-
-function statusBadge(status) {
-  const map = {
-    "Recibido": "badge-recibido",
-    "En proceso": "badge-proceso",
-    "En espera de materiales/autorización": "badge-espera",
-    "Resuelto": "badge-resuelto",
-    "Rechazado/Cerrado": "badge-cerrado",
-  };
-  return `<span class="badge ${map[status] || ""}">${esc(status)}</span>`;
 }
 
 function priorityLabel(prio) {
@@ -145,7 +135,6 @@ function renderTables() {
   const st = $("#order-filter-status").value;
   const urg = $("#order-filter-urgency").value;
 
-  //Filtrado operativo y ordenamiento por prioridad oficial
   const openReports = allReports
     .filter((r) => {
       if (FINAL_STATES.includes(r.state)) return false;
@@ -187,7 +176,7 @@ function renderTables() {
             <span style="color: var(--muted); font-size: 0.8rem;">${esc(r.reference || "Sin referencia")}</span>
           </td>
           <td>${priorityLabel(r.officialPriority)}</td>
-          <td>${statusBadge(r.state)}</td>
+          <td>${badge(r.state)}</td>
           <td>
             <div class="table-actions">
               <button type="button" class="button button-small" data-action="manage" data-code="${esc(r.code)}">
@@ -219,7 +208,7 @@ function renderTables() {
         <td>${esc(formatDate(r.created))}</td>
         <td><strong>${esc(r.category)}</strong></td>
         <td>${esc(locationName(r.location))}${r.reference ? ` · ${esc(r.reference)}` : ""}</td>
-        <td>${statusBadge(r.state)}</td>
+        <td>${badge(r.state)}</td>
         <td>
           <div class="table-actions">
             <button type="button" class="button button-small button-outline" data-action="detail" data-code="${esc(r.code)}">
@@ -233,7 +222,7 @@ function renderTables() {
     .join("");
 }
 
-//Cambio de pestañas
+// Cambio de pestañas
 function switchTab(showClosed) {
   $("#tab-activas-btn").setAttribute("aria-selected", String(!showClosed));
   $("#tab-historial-btn").setAttribute("aria-selected", String(showClosed));
@@ -244,7 +233,7 @@ function switchTab(showClosed) {
 $("#tab-activas-btn")?.addEventListener("click", () => switchTab(false));
 $("#tab-historial-btn")?.addEventListener("click", () => switchTab(true));
 
-//Eventos de filtros
+// Eventos de filtros
 [
   "#order-search",
   "#order-filter-category",
@@ -265,13 +254,13 @@ $("#btn-clear-order-filters")?.addEventListener("click", () => {
   renderTables();
 });
 
-//Contador de caracteres en vivo (>= 10 caracteres)
+// Contador de caracteres en vivo (>= 10 caracteres)
 $("#manage-order-observation")?.addEventListener("input", () => {
   const len = $("#manage-order-observation").value.trim().length;
   $("#observation-char-count").textContent = `${len} / 10 caracteres mínimos`;
 });
 
-//Apertura de modales (Gestionar y Expediente completo)
+// Apertura de modales (Gestionar y Expediente completo)
 document.addEventListener("click", (e) => {
   const closeBtn = e.target.closest("[data-close-modal]");
   if (closeBtn) {
@@ -293,14 +282,13 @@ document.addEventListener("click", (e) => {
 
     $("#manage-order-id").value = r.code;
     $("#manage-order-code").textContent = r.code;
-    $("#manage-order-current-status").innerHTML = statusBadge(r.state);
+    $("#manage-order-current-status").innerHTML = badge(r.state);
     $("#manage-order-perceived").textContent = r.urgency || r.perceivedUrgency || "No indicada";
     $("#manage-order-location").textContent = `${locationName(r.location)}${r.reference ? ` (${r.reference})` : ""}`;
     $("#manage-order-desc").textContent = r.description;
 
     $("#manage-order-priority").value = r.officialPriority || "Sin asignar";
 
-    //Transiciones permitidas según estado vigente
     const allowed = VALID_TRANSITIONS[r.state] || [];
     $("#manage-order-next-status").innerHTML =
       `<option value="">Mantener estado actual (${esc(r.state)})</option>` +
@@ -328,7 +316,7 @@ document.addEventListener("click", (e) => {
             (h) => `
             <li>
               <div class="history-meta">
-                <span>${statusBadge(h.state)} ${h.author ? `· <strong>${esc(h.author)}</strong>` : ""}</span>
+                <span>${badge(h.state)} ${h.author ? `· <strong>${esc(h.author)}</strong>` : ""}</span>
                 <span>${esc(formatDate(h.date))}</span>
               </div>
               <div>${esc(h.note)}</div>
@@ -339,14 +327,13 @@ document.addEventListener("click", (e) => {
       </ul>
     `;
 
-    // Expediente completo autorizado
     $("#detail-content").innerHTML = `
       <div><dt>Código único</dt><dd class="code-tag">${esc(r.code)}</dd></div>
       <div><dt>Fecha de registro</dt><dd>${esc(formatDate(r.created))}</dd></div>
-      <div><dt>Estado vigente</dt><dd>${statusBadge(r.state)}</dd></div>
+      <div><dt>Estado vigente</dt><dd>${badge(r.state)}</dd></div>
       <div><dt>Prioridad técnica oficial</dt><dd>${priorityLabel(r.officialPriority)}</dd></div>
       <div><dt>Urgencia percibida</dt><dd>${esc(r.urgency || r.perceivedUrgency || "No indicada")}</dd></div>
-      <div><dt>Área solicitante</dt><dd>${esc(r.requestingArea || "Comunidad universitaria")}</dd></div>
+      <div><dt>Área solicitante</dt><dd>${esc(r.requestingArea || r.reporterLink || "Comunidad universitaria")}</dd></div>
       <div class="detail-full"><dt>Ubicación física</dt><dd>${esc(locationName(r.location))}${r.reference ? ` · ${esc(r.reference)}` : ""}</dd></div>
       <div class="detail-full"><dt>Reportante (solo visible a personal autorizado)</dt><dd>${reporterInfo}</dd></div>
       <div class="detail-full"><dt>Descripción del daño</dt><dd>${esc(r.description)}</dd></div>
@@ -354,7 +341,6 @@ document.addEventListener("click", (e) => {
       <div class="detail-full"><dt>Historial cronológico y trazabilidad (RF-18)</dt><dd>${historyHtml}</dd></div>
     `;
 
-    //Renderizar Blobs/Files reales almacenados en IndexedDB(base de datos pendiente)
     if (r.photos?.length) {
       const slot = $("#detail-photos-slot");
       slot.innerHTML = '<div class="photo-strip"></div>';
@@ -383,7 +369,7 @@ document.addEventListener("click", (e) => {
   }
 });
 
-//Guardar cambios en IndexedDB mediante saveReport()
+// Guardar cambios en IndexedDB mediante saveReport()
 $("#form-manage-order")?.addEventListener("submit", async (e) => {
   e.preventDefault();
   const code = $("#manage-order-id").value;
@@ -406,7 +392,6 @@ $("#form-manage-order")?.addEventListener("submit", async (e) => {
     return;
   }
 
-  //Validación estricta
   if (statusChanged) {
     const allowed = VALID_TRANSITIONS[r.state] || [];
     if (!allowed.includes(nextStatus)) {
@@ -458,7 +443,7 @@ $("#form-manage-order")?.addEventListener("submit", async (e) => {
   }
 });
 
-//Comprobante imprimible PDF tamaño carta
+// Comprobante imprimible PDF tamaño carta
 $("#btn-print-receipt")?.addEventListener("click", () => {
   if (!activeDetailReport) return;
   const r = activeDetailReport;
@@ -497,7 +482,7 @@ $("#btn-print-receipt")?.addEventListener("click", () => {
       <table>
         <tr><th>Código único de seguimiento</th><td><strong>${esc(r.code)}</strong></td></tr>
         <tr><th>Fecha y hora de registro</th><td>${esc(formatDate(r.created))}</td></tr>
-        <tr><th>Área solicitante</th><td>${esc(r.requestingArea || "Comunidad universitaria")}</td></tr>
+        <tr><th>Área solicitante</th><td>${esc(r.requestingArea || r.reporterLink || "Comunidad universitaria")}</td></tr>
         <tr><th>Categoría de daño</th><td>${esc(r.category)}</td></tr>
         <tr><th>Ubicación física</th><td>${esc(locationName(r.location))}${r.reference ? ` · ${esc(r.reference)}` : ""}</td></tr>
         <tr><th>Estado actual</th><td>${esc(r.state)}</td></tr>
@@ -524,7 +509,7 @@ $("#btn-print-receipt")?.addEventListener("click", () => {
 
 window.addEventListener("pagehide", releaseDetailPhotos);
 
-//Inicialización
+// Inicialización
 async function init() {
   populateCatalogFilters();
   try {

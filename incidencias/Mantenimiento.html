@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestion operativa - Mantenimiento | Reportes UES</title>
+    <meta name="theme-color" content="#a60000"/>
+    <link rel="stylesheet" href="styles/index.css"/> <!--CSS heredativo -->
+    <link rel="stylesheet" href="styles/mantenimiento.css"/> <!-- CSS propio de mantenimiento -->
+</head>
+<body data-page="mantenimiento">
+    
+    <!--Acceso directo al contenido-->
+    <a class="skip-link" href="#contenido">Saltar al contenido</a>
+
+    <!--Aviso de demostración-->
+    <div class="demo-bar">
+      <div class="wrap">
+        <span>
+          <i></i>
+          PROTOTIPO INTERACTIVO
+        </span>
+        <span>Datos de ejemplo · Los cambios se guardan solo en este navegador</span>
+      </div>
+    </div>
+
+    <!--Encabezado y navegación-->
+    <header class="site-header">
+      <div class="wrap header-inner">
+        <a class="brand" href="index.html" aria-label="Sistema de Reportes UES, inicio">
+          <img src="files/images/logo.png" alt="Logo del sistema" />
+          <span>
+            <small>UNIVERSIDAD DE EL SALVADOR</small>
+            <strong>
+              Reportes
+              <span class="brand-accent">UES</span>
+            </strong>
+          </span>
+        </a>
+        <button
+          class="menu-toggle"
+          aria-controls="main-nav"
+          aria-expanded="false"
+          aria-label="Abrir menú"
+        >
+          <svg
+            class="icon"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.7"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            aria-hidden="true"
+          >
+            <path d="M4 6h16M4 12h16M4 18h16" />
+          </svg>
+        </button>
+        <nav id="main-nav" class="main-nav" aria-label="Navegación principal">
+          <a href="index.html">Inicio</a>
+          <a href="incidencias.html">Incidencias</a>
+          <a href="seguimiento.html">Seguimiento</a>
+          <a href="mantenimiento.html" aria-current="page">Mantenimiento</a>
+          <span class="nav-account" id="account-link" title="Sesión activa · Unidad de Mantenimiento">
+            Mantenimiento
+          </span>
+          <button id="logout" class="text-button" type="button">Cerrar sesión</button>
+        </nav>
+      </div>
+    </header>
+
+    <!--Contenido de la página-->
+    <main id="contenido" class="wrap main-content">
+      <header class="page-heading">
+        <p class="eyebrow">GESTIÓN OPERATIVA</p>
+        <h1>Panel de Mantenimiento</h1>
+        <p>
+          Consulta centralizada de incidencias del campus, asignación de prioridad
+          técnica oficial, registro de avances operativos y emisión de comprobantes.
+        </p>
+      </header>
+
+      <!--Resumen de incidencias por estados oficiales-->
+      <section class="kpi-strip" aria-label="Resumen de incidencias por estado">
+        <article class="surface kpi-card">
+          <span>Recibidos</span>
+          <strong id="kpi-recibido">0</strong>
+        </article>
+        <article class="surface kpi-card">
+          <span>En proceso</span>
+          <strong id="kpi-proceso">0</strong>
+        </article>
+        <article class="surface kpi-card">
+          <span>En espera materiales/autorizacion</span>
+          <strong id="kpi-espera">0</strong>
+        </article>
+        <article class="surface kpi-card">
+          <span>Finalizados</span>
+          <strong id="kpi-finalizados">0</strong>
+        </article>
+      </section>
+
+      <!--Selector para incidencias abiertas o cerradas-->
+      <nav class="view-switch admin-tabs" role="tablist" aria-label="Secciones de gestión operativa">
+        <button
+          type="button"
+          role="tab"
+          id="tab-activas-btn"
+          aria-selected="true"
+          aria-controls="section-activas"
+          class="tab-trigger"
+        >
+          Incidencias abiertas
+        </button>
+        <button
+          type="button"
+          role="tab"
+          id="tab-historial-btn"
+          aria-selected="false"
+          aria-controls="section-historial"
+          class="tab-trigger"
+        >
+          Casos cerrados (Finales)
+        </button>
+      </nav>
+
+      <!--Seccion de filtrado-->
+      <section id="section-activas" role="tabpanel" aria-labelledby="tab-activas-btn">
+        <div class="admin-toolbar">
+          <div class="admin-filters">
+            <div class="field search-field">
+              <label for="order-search">Buscar incidencia</label>
+              <input
+                type="search"
+                id="order-search"
+                placeholder="Buscar por código o descripción..."
+                autocomplete="off"
+              />
+            </div>
+            <div class="field">
+            <label for="order-filter-category">Categoría</label>
+            <select id="order-filter-category">
+                <option value="">Todas las categorías</option>
+            </select>
+            </div>
+            <div class="field">
+            <label for="order-filter-location">Ubicación</label>
+            <select id="order-filter-location">
+                <option value="">Todas las ubicaciones</option>
+            </select>
+            </div>
+            <div class="field">
+              <label for="order-filter-status">Estado operativo</label>
+              <select id="order-filter-status">
+                <option value="">Todos los abiertos</option>
+                <option value="Recibido">Recibido</option>
+                <option value="En proceso">En proceso</option>
+                <option value="En espera de materiales/autorización">
+                  En espera de materiales/autorización
+                </option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="order-filter-urgency">Urgencia percibida</label>
+              <select id="order-filter-urgency">
+                <option value="">Todas</option>
+                <option value="Alta">Alta</option>
+                <option value="Media">Media</option>
+                <option value="Baja">Baja</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <!--Resultados del filtro o Todas las incidencias-->
+        <div class="results-meta">
+          <p id="orders-count" role="status">Cargando incidencias...</p>
+          <button type="button" class="text-button" id="btn-clear-order-filters">
+            Limpiar filtros
+          </button>
+        </div>
+
+        <!--Tabla centralizada-->
+        <div class="table-wrapper" id="orders-table-container">
+          <table class="admin-table">
+            <thead>
+              <tr>
+                <th scope="col">Código</th>
+                <th scope="col">Fecha</th>
+                <th scope="col">Categoría</th>
+                <th scope="col">Ubicación</th>
+                <th scope="col">Prioridad oficial</th>
+                <th scope="col">Estado</th>
+                <th scope="col">Acciones</th>
+              </tr>
+            </thead>
+            <tbody id="orders-table-body">
+              <!--Renderizado desde JavaScript-->
+            </tbody>
+          </table>
+        </div>
+
+        <!--Estado vacío-->
+        <div id="orders-empty-state" class="empty-state" hidden>
+          <p>No hay incidencias que coincidan con los criterios de filtrado.</p>
+        </div>
+      </section>
+
+      <!--Seccion casos cerrados-->
+      <section id="section-historial" role="tabpanel" aria-labelledby="tab-historial-btn" hidden>
+        <div class="results-meta">
+          <p id="history-count" role="status">Cargando casos cerrados...</p>
+        </div>
+
+        <div class="table-wrapper" id="history-table-container">
+          <table class="admin-table">
+            <thead>
+              <tr>
+                <th scope="col">Código</th>
+                <th scope="col">Fecha registro</th>
+                <th scope="col">Categoría</th>
+                <th scope="col">Ubicación</th>
+                <th scope="col">Estado final</th>
+                <th scope="col">Acciones</th>
+              </tr>
+            </thead>
+            <tbody id="history-table-body">
+              <!--Renderizado desde JavaScript-->
+            </tbody>
+          </table>
+        </div>
+
+        <div id="history-empty-state" class="empty-state" hidden>
+          <p>No hay expedientes en estado final (Resuelto o Rechazado/Cerrado).</p>
+        </div>
+      </section>
+    </main>
+
+    <!--Pie de página-->
+    <footer class="site-footer">
+      <div class="wrap footer-inner">
+        <div>
+          <strong>Un campus mejor empieza contigo.</strong>
+          <p>Módulo de Gestión Operativa · Facultad Multidisciplinaria Oriental, UES</p>
+        </div>
+        <a href="ayuda.html">
+          ¿Necesitas orientación?
+          <svg
+            class="icon"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.7"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            aria-hidden="true"
+          >
+            <path d="M5 12h14m-6-6 6 6-6 6" />
+          </svg>
+        </a>
+      </div>
+    </footer>
+
+    <!--Gestionar prioridad y transicion de estado-->
+    <dialog class="modal" id="modal-manage-order" aria-labelledby="modal-manage-title">
+      <div class="modal-header">
+        <h2 id="modal-manage-title">Gestionar incidencia</h2>
+        <button
+          type="button"
+          class="modal-close-btn"
+          data-close-modal="modal-manage-order"
+          aria-label="Cerrar modal"
+        >
+          &times;
+        </button>
+      </div>
+
+      <form id="form-manage-order" novalidate>
+        <input type="hidden" id="manage-order-id" value="" />
+
+        <dl class="detail-grid">
+          <div>
+            <dt>Código único</dt>
+            <dd id="manage-order-code" class="code-tag">—</dd>
+          </div>
+          <div>
+            <dt>Estado actual</dt>
+            <dd id="manage-order-current-status">—</dd>
+          </div>
+          <div>
+            <dt>Urgencia percibida (reportante)</dt>
+            <dd id="manage-order-perceived">—</dd>
+          </div>
+          <div>
+            <dt>Ubicación</dt>
+            <dd id="manage-order-location">—</dd>
+          </div>
+          <div class="detail-full">
+            <dt>Descripción del daño</dt>
+            <dd id="manage-order-desc">—</dd>
+          </div>
+        </dl>
+
+        <!--Asignación de prioridad técnica oficial-->
+        <div class="field">
+          <label for="manage-order-priority">Prioridad técnica oficial (RF-19)</label>
+          <select id="manage-order-priority">
+            <option value="Sin asignar">Sin asignar</option>
+            <option value="Baja">Baja</option>
+            <option value="Media">Media</option>
+            <option value="Alta">Alta</option>
+          </select>
+        </div>
+
+        <!--Transiciones validas permitidas según estado actual-->
+        <div class="field">
+          <label for="manage-order-next-status">Transición de estado</label>
+          <select id="manage-order-next-status">
+            <!--Opciones cargadas dinámicamente según reglas de transición-->
+          </select>
+        </div>
+
+        <!--Observación técnica obligatoria >= 10 caracteres al cambiar estado-->
+        <div class="field" id="observation-field-wrapper">
+          <label for="manage-order-observation">
+            Observación técnica (obligatoria al cambiar estado)
+          </label>
+          <textarea
+            id="manage-order-observation"
+            placeholder="Describe el diagnóstico, avance, falta de insumos o motivo de cierre (mínimo 10 caracteres)..."
+          ></textarea>
+          <span class="char-hint" id="observation-char-count">0 / 10 caracteres mínimos</span>
+          <span class="field-error" id="manage-observation-error"></span>
+        </div>
+
+        <div class="modal-actions">
+          <button type="button" class="button button-quiet" data-close-modal="modal-manage-order">
+            Cancelar
+          </button>
+          <button type="submit" class="button">Guardar cambios</button>
+        </div>
+      </form>
+    </dialog>
+
+    <!--Expediente completo de la incidencias y generacion de pdf-->
+    <dialog class="modal" id="modal-order-detail" aria-labelledby="modal-detail-title">
+      <div class="modal-header">
+        <h2 id="modal-detail-title">Expediente completo de incidencia</h2>
+        <button
+          type="button"
+          class="modal-close-btn"
+          data-close-modal="modal-order-detail"
+          aria-label="Cerrar modal"
+        >
+          &times;
+        </button>
+      </div>
+
+      <div id="detail-final-alert" class="dialog-alert" hidden>
+        <strong>Expediente cerrado:</strong> Este caso se encuentra en un estado final
+        (<em>Resuelto</em> o <em>Rechazado/Cerrado</em>) y no admite nuevas transiciones (RN-02).
+      </div>
+
+      <dl class="detail-grid" id="detail-content">
+        <!--Renderizado dinámicamente-->
+      </dl>
+
+      <div class="modal-actions">
+        <button type="button" class="button button-quiet" data-close-modal="modal-order-detail">
+          Cerrar
+        </button>
+        <button type="button" id="btn-print-receipt" class="button button-outline">
+          <svg
+            class="icon"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.7"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            aria-hidden="true"
+          >
+            <path d="M6 9V2h12v7M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2" />
+            <rect x="6" y="14" width="12" height="8" />
+          </svg>
+          Comprobante PDF
+        </button>
+      </div>
+    </dialog>
+
+    <!--Mensajes temporales-->
+    <div class="toast" id="toast" role="status" hidden></div>
+    
+    <script type="module" src="scripts/mantenimiento.js"></script>
+
+</body>
+</html>

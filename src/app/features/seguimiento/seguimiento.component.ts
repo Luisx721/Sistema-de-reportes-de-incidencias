@@ -1,0 +1,237 @@
+import { Component, OnInit, OnDestroy, inject } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
+import { ActivatedRoute, Router } from '@angular/router';
+import { DataService } from '../../core/services/data.service';
+import { IncidentReport } from '../../core/models/incident.model';
+import { BadgeComponent } from '../../shared/components/badge/badge.component';
+
+@Component({
+  selector: 'app-seguimiento',
+  standalone: true,
+  imports: [CommonModule, FormsModule, BadgeComponent],
+  template: `
+    <main id="contenido" class="wrap main-content">
+      <header class="page-heading">
+        <p class="eyebrow">CONSULTA PÚBLICA</p>
+        <h1>Cada reporte tiene una historia.</h1>
+        <p>
+          Ingresa tu código para consultar el estado y las observaciones. No necesitas
+          iniciar sesión.
+        </p>
+      </header>
+
+      <!-- Consulta por código -->
+      <form class="lookup-form surface" id="lookup-form" (ngSubmit)="searchCode()">
+        <div class="field">
+          <label for="tracking-code">Código de seguimiento</label>
+          <div class="lookup-controls">
+            <input
+              id="tracking-code"
+              name="code"
+              [(ngModel)]="searchQuery"
+              placeholder="Ej. UESDEMO0001"
+              autocomplete="off"
+              maxlength="40"
+              required
+              aria-describedby="lookup-hint"
+            />
+            <button class="button" type="submit">
+              <svg
+                class="icon"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.7"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                aria-hidden="true"
+              >
+                <circle cx="10.5" cy="10.5" r="6.5" />
+                <path d="m16 16 4 4" />
+              </svg>
+              Consultar
+            </button>
+          </div>
+          <p id="lookup-hint" class="field-note">
+            Para explorar la demostración puedes usar
+            <button
+              type="button"
+              class="inline-button"
+              id="example-code"
+              (click)="useExampleCode()"
+            >
+              UESDEMO0001
+            </button>
+            .
+          </p>
+        </div>
+      </form>
+
+      <!-- Resultado e historial del reporte -->
+      <section id="tracking-result" aria-live="polite">
+        @if (loading) {
+          <p class="empty-state" role="status">Consultando reporte…</p>
+        } @else if (searched && !report) {
+          <div class="empty-state">
+            <h2>No encontramos ese código</h2>
+            <p>
+              Revisa que esté completo. En esta demostración solo puedes consultar los
+              ejemplos y los reportes guardados en este navegador.
+            </p>
+          </div>
+        } @else if (report) {
+          <div class="detail-header">
+            <div>
+              <p class="eyebrow">
+                {{ report.sample ? 'REPORTE DE EJEMPLO' : 'REPORTE LOCAL DE DEMOSTRACIÓN' }}
+              </p>
+              <h2 class="detail-code">{{ report.code }}</h2>
+            </div>
+            <app-badge [state]="report.state" />
+          </div>
+
+          <div class="detail-layout">
+            <article class="surface detail-panel">
+              <h2>Información del reporte</h2>
+              <dl class="detail-data">
+                <div>
+                  <dt>Categoría</dt>
+                  <dd>{{ report.category }}</dd>
+                </div>
+                <div>
+                  <dt>Ubicación</dt>
+                  <dd>{{ dataService.locationName(report.location) }}</dd>
+                </div>
+                <div>
+                  <dt>Fecha de registro</dt>
+                  <dd>{{ dataService.formatDate(report.created) }}</dd>
+                </div>
+                <div>
+                  <dt>Referencia</dt>
+                  <dd>{{ report.reference || 'Sin referencia adicional' }}</dd>
+                </div>
+              </dl>
+              <h3>Descripción</h3>
+              <p class="report-description">{{ report.description }}</p>
+
+              @if (photoUrls.length > 0) {
+                <h3>Fotografías adjuntas</h3>
+                <div class="detail-images">
+                  @for (url of photoUrls; track $index) {
+                    <a
+                      [href]="url"
+                      target="_blank"
+                      rel="noopener"
+                      [attr.aria-label]="'Abrir fotografía ' + ($index + 1)"
+                    >
+                      <img [src]="url" [alt]="'Fotografía ' + ($index + 1) + ' de la incidencia'" />
+                    </a>
+                  }
+                </div>
+              }
+            </article>
+
+            <article class="surface detail-panel">
+              <h2>Historial de atención</h2>
+              <ol class="timeline">
+                @for (h of report.history; track $index) {
+                  <li>
+                    <strong>{{ h.state }}</strong>
+                    <time [attr.datetime]="h.date">{{ dataService.formatDate(h.date) }}</time>
+                    <p>{{ h.note }}</p>
+                  </li>
+                }
+              </ol>
+            </article>
+          </div>
+        } @else {
+          <!-- Estado inicial -->
+          <div class="empty-state">
+            <svg
+              class="icon"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.7"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              aria-hidden="true"
+            >
+              <circle cx="10.5" cy="10.5" r="6.5" />
+              <path d="m16 16 4 4" />
+            </svg>
+            <h2>El seguimiento empieza con tu código</h2>
+            <p>Lo recibes al completar un reporte. Guárdalo para volver a consultar.</p>
+          </div>
+        }
+      </section>
+    </main>
+  `,
+})
+export class SeguimientoComponent implements OnInit, OnDestroy {
+  dataService = inject(DataService);
+  private route = inject(ActivatedRoute);
+  private router = inject(Router);
+
+  searchQuery = '';
+  report: IncidentReport | null = null;
+  loading = false;
+  searched = false;
+  photoUrls: string[] = [];
+
+  ngOnInit(): void {
+    this.route.queryParamMap.subscribe((params) => {
+      const code = params.get('codigo');
+      if (code) {
+        this.searchQuery = code;
+        this.performLookup(code);
+      }
+    });
+  }
+
+  ngOnDestroy(): void {
+    this.revokePhotoUrls();
+  }
+
+  useExampleCode(): void {
+    this.searchQuery = 'UESDEMO0001';
+    this.searchCode();
+  }
+
+  searchCode(): void {
+    const code = this.searchQuery.trim().toUpperCase();
+    if (!code) return;
+    this.searchQuery = code;
+    this.router.navigate([], {
+      relativeTo: this.route,
+      queryParams: { codigo: code },
+      queryParamsHandling: 'merge',
+    });
+    this.performLookup(code);
+  }
+
+  private async performLookup(code: string): Promise<void> {
+    this.loading = true;
+    this.searched = true;
+    this.revokePhotoUrls();
+
+    try {
+      await this.dataService.seed();
+      const r = await this.dataService.getReport(code);
+      this.report = r || null;
+      if (this.report && this.report.photos && this.report.photos.length > 0) {
+        this.photoUrls = this.report.photos.map((p) => URL.createObjectURL(p));
+      }
+    } catch (err) {
+      this.report = null;
+    } finally {
+      this.loading = false;
+    }
+  }
+
+  private revokePhotoUrls(): void {
+    this.photoUrls.forEach((url) => URL.revokeObjectURL(url));
+    this.photoUrls = [];
+  }
+}

@@ -1,0 +1,108 @@
+import { Component } from '@angular/core';
+import { RouterLink } from '@angular/router';
+
+@Component({
+  selector: 'app-ayuda',
+  standalone: true,
+  imports: [RouterLink],
+  template: `
+    <main id="contenido" class="wrap main-content">
+      <header class="page-heading">
+        <p class="eyebrow">GUÍA DE ORIENTACIÓN</p>
+        <h1>Reportar es sencillo.</h1>
+        <p>
+          No necesitas crear una cuenta. Solo identifica el lugar, describe lo que
+          observaste y conserva tu código.
+        </p>
+      </header>
+      <div class="guide-layout">
+        <div>
+          <!-- Pasos para crear y consultar un reporte -->
+          <ol class="guide-steps">
+            <li>
+              <span class="step-number">01</span>
+              <div>
+                <h2>Ubica el problema</h2>
+                <p>
+                  Elige la categoría y la ubicación del catálogo. Agrega una referencia si
+                  ayuda a encontrar el daño.
+                </p>
+              </div>
+            </li>
+            <li>
+              <span class="step-number">02</span>
+              <div>
+                <h2>Cuéntanos qué pasó</h2>
+                <p>
+                  Escribe una descripción de al menos 20 caracteres. Puedes añadir hasta
+                  tres fotografías JPG o PNG, de hasta 5 MB cada una. No incluyas datos
+                  personales en la descripción o las fotos.
+                </p>
+              </div>
+            </li>
+            <li>
+              <span class="step-number">03</span>
+              <div>
+                <h2>Envía y guarda tu código</h2>
+                <p>
+                  Al terminar verás la confirmación y un código único. Puedes copiarlo o
+                  imprimir el resumen. Tu nombre y vínculo son opcionales al reportar.
+                </p>
+              </div>
+            </li>
+            <li>
+              <span class="step-number">04</span>
+              <div>
+                <h2>Consulta el seguimiento</h2>
+                <p>
+                  Entra a Seguimiento e ingresa tu código para ver el estado y el
+                  historial. La cuenta es opcional también para consultar.
+                </p>
+              </div>
+            </li>
+          </ol>
+          <a class="button" routerLink="/reporte">
+            Crear un reporte
+            <svg
+              class="icon"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.7"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              aria-hidden="true"
+            >
+              <path d="M5 12h14m-6-6 6 6-6 6" />
+            </svg>
+          </a>
+        </div>
+
+        <!-- Categorías y estados de atención -->
+        <aside class="surface guide-aside">
+          <p class="eyebrow">QUÉ PUEDES REPORTAR</p>
+          <h2>Problemas de infraestructura</h2>
+          <p>
+            Daños en mobiliario, instalaciones eléctricas, agua y saneamiento, edificios o
+            espacios comunes.
+          </p>
+          <hr />
+          <h3>¿Qué significa cada estado?</h3>
+          <dl class="state-guide">
+            <dt>Recibido</dt>
+            <dd>El reporte fue registrado y está pendiente de evaluación.</dd>
+            <dt>En proceso</dt>
+            <dd>La unidad responsable está atendiendo el problema.</dd>
+            <dt>En espera de materiales/autorización</dt>
+            <dd>La atención está pendiente de recursos o autorización.</dd>
+            <dt>Resuelto</dt>
+            <dd>Se registró la finalización del trabajo.</dd>
+            <dt>Rechazado/Cerrado</dt>
+            <dd>El reporte no procede; el motivo debe quedar en el historial.</dd>
+          </dl>
+        </aside>
+      </div>
+    </main>
+  `,
+})
+export class AyudaComponent {}

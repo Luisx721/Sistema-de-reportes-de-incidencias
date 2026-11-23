@@ -1,0 +1,201 @@
+<main id="contenido" class="workspace wrap">
+  <header class="workspace-heading">
+    <div>
+      <p class="eyebrow">GESTIÓN DEL CAMPUS</p>
+      <h1>{{ title }}</h1>
+      <p>{{ auth.user()?.name }} · {{ auth.user()?.profile }} · {{ auth.user()?.area }}</p>
+    </div>
+    <button class="button button-outline" (click)="reload()" [disabled]="loading">
+      Actualizar
+    </button>
+  </header>
+  <p class="notice">
+    Entorno de demostración. Consulta los expedientes y utiliza las acciones disponibles para tu
+    perfil. Los cambios se conservan en este navegador.
+  </p>
+  @if (canReport) {
+    <a class="button" routerLink="/reporte">Registrar incidencia</a>
+  }
+  <section class="metrics" aria-label="Resumen por estado">
+    @for (item of data.states; track item) {
+      <button class="metric" (click)="state = item; tab = 'bandeja'">
+        <strong>{{ count(item) }}</strong><span>{{ item }}</span>
+      </button>
+    }
+  </section>
+  <nav class="tabs" aria-label="Secciones">
+    <button [class.active]="tab === 'bandeja'" (click)="tab = 'bandeja'">
+      Bandeja de incidencias
+    </button>
+    @if (canSeeReports) {
+      <button [class.active]="tab === 'informes'" (click)="tab = 'informes'">
+        Informes y exportación
+      </button>
+    }
+  </nav>
+  <section class="filter-grid" aria-label="Filtros">
+    <label>Buscar código o descripción<input [(ngModel)]="query" /></label>
+    <label
+      >Categoría<select [(ngModel)]="category">
+        <option value="">Todas</option>
+        @for (item of categories; track item) {
+          <option>{{ item }}</option>
+        }
+      </select></label
+    >
+    <label
+      >Ubicación<select [(ngModel)]="location">
+        <option value="">Todas</option>
+        @for (id of locationIds; track id) {
+          <option [value]="id">{{ data.locationName(id) }}</option>
+        }
+      </select></label
+    >
+    <label
+      >Estado<select [(ngModel)]="state">
+        <option value="">Todos</option>
+        @for (item of data.states; track item) {
+          <option>{{ item }}</option>
+        }
+      </select></label
+    >
+    <label>Desde<input type="date" [(ngModel)]="from" /></label
+    ><label>Hasta<input type="date" [(ngModel)]="to" /></label>
+    <button class="button button-outline" (click)="clear()">Limpiar filtros</button>
+  </section>
+  @if (dateError) {
+    <p role="alert">La fecha inicial no puede ser posterior a la final.</p>
+  }
+  @if (message) {
+    <p role="status" class="notice">{{ message }}</p>
+  }
+  @if (loading) {
+    <p role="status">Cargando expedientes</p>
+  } @else if (tab === 'informes' && canSeeReports) {
+    <section class="panel">
+      <h2>Informe de incidencias</h2>
+      <p>{{ filtered.length }} casos según los filtros por fecha de registro</p>
+      <button class="button" (click)="export()" [disabled]="dateError || !filtered.length">
+        Descargar CSV
+      </button>
+      @for (item of data.states; track item) {
+        <p>
+          {{ item }} <strong>{{ total(item) }} · {{ percentage(item) }} %</strong>
+        </p>
+      }
+      <div class="columns">
+        @for (field of ['category', 'location']; track field) {
+          <section>
+            <h3>
+              {{
+                field === 'category' ? 'Categorías por recurrencia' : 'Ubicaciones por recurrencia'
+              }}
+            </h3>
+            @for (group of breakdown($any(field)); track group.name) {
+              <p>
+                {{ group.name }} <strong>{{ group.count }}</strong>
+              </p>
+            }
+          </section>
+        }
+      </div>
+    </section>
+  } @else {
+    <p>{{ filtered.length }} incidencias encontradas</p>
+    <section class="report-list">
+      @for (report of filtered; track report.code) {
+        <article class="report-card">
+          <div>
+            <span class="badge">{{ report.state }}</span>
+            <h2>{{ report.category }}</h2>
+            <p>{{ report.code }} · {{ data.locationName(report.location) }}</p>
+            <p>{{ report.description }}</p>
+            <small
+              >{{ data.formatDate(report.created) }} · Prioridad
+              {{ report.priority || 'Sin asignar' }}</small
+            >
+          </div>
+          <button class="button button-outline" (click)="open(report)">Abrir expediente</button>
+        </article>
+      } @empty {
+        <div class="panel">
+          <h2>No hay coincidencias</h2>
+          <p>Prueba otros filtros o registra una incidencia.</p>
+        </div>
+      }
+    </section>
+  }
+  @if (selected; as report) {
+    <section class="panel detail" aria-label="Expediente seleccionado">
+      <header class="workspace-heading">
+        <h2>Expediente {{ report.code }}</h2>
+        <button class="button button-outline" (click)="close()">Cerrar expediente</button>
+      </header>
+      <p>{{ report.category }} · {{ data.locationName(report.location) }} · {{ report.state }}</p>
+      <p>{{ report.description }}</p>
+      <p>Referencia {{ report.reference || 'Sin referencia' }}</p>
+      <p>Área solicitante {{ report.requesterArea || 'Reporte comunitario' }}</p>
+      @if (
+        editable ||
+        auth.user()?.profile === 'Mantenimiento' ||
+        auth.user()?.profile === 'Desarrollo Físico'
+      ) {
+        <p>
+          Reportante {{ report.reporterName || 'Sin identificación' }} · {{ report.reporterLink }}
+        </p>
+      }
+      <div class="photos">
+        @for (photo of photos; track photo) {
+          <a [href]="photo" target="_blank" rel="noopener"
+            ><img [src]="photo" alt="Evidencia de la incidencia"
+          /></a>
+        }
+      </div>
+      <h3>Historial</h3>
+      <ol>
+        @for (entry of report.history; track $index) {
+          <li>
+            <strong>{{ entry.state }}</strong> · {{ data.formatDate(entry.date) }}
+            <p>{{ entry.note }}</p>
+          </li>
+        }
+      </ol>
+      <button class="button button-outline" (click)="documents.pdf(report)">
+        Descargar comprobante PDF
+      </button>
+      @if (editable) {
+        <form (ngSubmit)="save()" class="edit-form">
+          <h3>Registrar atención</h3>
+          <label
+            >Estado<select name="nextState" [(ngModel)]="nextState">
+              <option [value]="report.state">{{ report.state }}</option>
+              @for (item of transitions; track item) {
+                <option>{{ item }}</option>
+              }
+            </select></label
+          ><label
+            >Prioridad técnica<select name="priority" [(ngModel)]="priority">
+              <option>Baja</option>
+              <option>Media</option>
+              <option>Alta</option>
+            </select></label
+          ><label
+            >Observación obligatoria<textarea
+              name="note"
+              [(ngModel)]="note"
+              minlength="10"
+              required
+              rows="3"
+            ></textarea></label
+          ><button class="button" [disabled]="busy">
+            {{ busy ? 'Guardando' : 'Guardar cambio' }}
+          </button>
+        </form>
+      } @else {
+        <p class="notice">
+          Expediente de consulta. Tu perfil no puede modificar este caso o el caso ya está cerrado.
+        </p>
+      }
+    </section>
+  }
+</main>

@@ -1,0 +1,671 @@
+<main id="contenido" class="wrap main-content">
+  <header class="page-heading">
+    <p class="eyebrow">PANEL DE CONTROL</p>
+    <h1>Administración del campus</h1>
+    <p>
+      Gestión centralizada de cuentas de usuario, catálogos del sistema y respaldo de datos de
+      infraestructura.
+    </p>
+  </header>
+
+  <!-- Selector de secciones principales -->
+  <nav
+    class="view-switch admin-tabs"
+    role="tablist"
+    aria-label="Secciones del panel de administración"
+  >
+    <button
+      type="button"
+      role="tab"
+      id="tab-cuentas-btn"
+      [attr.aria-selected]="activeTab === 'cuentas'"
+      [attr.aria-pressed]="activeTab === 'cuentas'"
+      class="tab-trigger"
+      (click)="activeTab = 'cuentas'"
+    >
+      Cuentas
+    </button>
+    <button
+      type="button"
+      role="tab"
+      id="tab-catalogos-btn"
+      [attr.aria-selected]="activeTab === 'catalogos'"
+      [attr.aria-pressed]="activeTab === 'catalogos'"
+      class="tab-trigger"
+      (click)="activeTab = 'catalogos'"
+    >
+      Catálogos
+    </button>
+    <button
+      type="button"
+      role="tab"
+      id="tab-respaldo-btn"
+      [attr.aria-selected]="activeTab === 'respaldo'"
+      [attr.aria-pressed]="activeTab === 'respaldo'"
+      class="tab-trigger"
+      (click)="activeTab = 'respaldo'"
+    >
+      Respaldo y restauración
+    </button>
+  </nav>
+
+  <!-- Sección cuentas -->
+  <section id="section-cuentas" role="tabpanel" [hidden]="activeTab !== 'cuentas'">
+    <div class="admin-toolbar">
+      <div class="admin-filters">
+        <div class="field search-field">
+          <label for="account-search">Buscar cuenta</label>
+          <input
+            type="search"
+            id="account-search"
+            [(ngModel)]="accountSearch"
+            placeholder="Buscar por nombre o usuario..."
+            autocomplete="off"
+          />
+        </div>
+        <div class="field">
+          <label for="account-filter-role">Perfil</label>
+          <select id="account-filter-role" [(ngModel)]="accountFilterRole">
+            <option value="">Todos los perfiles</option>
+            <option value="Ordenanza">Ordenanza</option>
+            <option value="Jefatura">Jefatura</option>
+            <option value="Mantenimiento">Mantenimiento</option>
+            <option value="Desarrollo Físico">Desarrollo Físico</option>
+            <option value="Autoridad">Autoridad</option>
+            <option value="Administrador">Administrador</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="account-filter-status">Estado</label>
+          <select id="account-filter-status" [(ngModel)]="accountFilterStatus">
+            <option value="">Todos los estados</option>
+            <option value="activa">Activa</option>
+            <option value="desactivada">Desactivada</option>
+          </select>
+        </div>
+      </div>
+      <div>
+        <button
+          type="button"
+          id="btn-new-account"
+          class="button button-small"
+          (click)="openNewAccountModal()"
+        >
+          <svg
+            class="icon"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.7"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            aria-hidden="true"
+          >
+            <path d="M12 5v14M5 12h14" />
+          </svg>
+          Nueva cuenta
+        </button>
+      </div>
+    </div>
+
+    <!-- Metadatos de búsqueda y resultados -->
+    <div class="results-meta">
+      <p id="accounts-count" role="status">
+        Mostrando {{ filteredAccounts.length }} de {{ adminService.accounts().length }} cuentas
+        registradas
+      </p>
+      <button
+        type="button"
+        class="text-button"
+        id="btn-clear-account-filters"
+        (click)="clearAccountFilters()"
+      >
+        Limpiar filtros
+      </button>
+    </div>
+
+    <!-- Tabla de cuentas -->
+    @if (filteredAccounts.length > 0) {
+      <div class="table-wrapper" id="accounts-table-container">
+        <table class="admin-table">
+          <thead>
+            <tr>
+              <th scope="col">Nombre</th>
+              <th scope="col">Usuario</th>
+              <th scope="col">Perfil</th>
+              <th scope="col">Área</th>
+              <th scope="col">Estado</th>
+              <th scope="col">Acciones</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (acc of filteredAccounts; track acc.id) {
+              <tr>
+                <td>
+                  <strong>{{ acc.name }}</strong>
+                </td>
+                <td>
+                  <code>{{ acc.username }}</code>
+                </td>
+                <td>{{ acc.role }}</td>
+                <td>{{ acc.area }}</td>
+                <td>
+                  @if (acc.active) {
+                    <span class="badge resolved">Activa</span>
+                  } @else {
+                    <span class="badge closed">Desactivada</span>
+                  }
+                </td>
+                <td>
+                  <div class="table-actions">
+                    <button
+                      type="button"
+                      class="button button-small button-outline"
+                      (click)="openEditAccountModal(acc)"
+                    >
+                      Editar
+                    </button>
+                    @if (acc.active) {
+                      <button
+                        type="button"
+                        class="button button-small button-quiet"
+                        (click)="openDeactivateAccountModal(acc)"
+                      >
+                        Desactivar
+                      </button>
+                    } @else {
+                      <button
+                        type="button"
+                        class="button button-small button-quiet"
+                        (click)="reactivateAccount(acc)"
+                      >
+                        Reactivar
+                      </button>
+                    }
+                  </div>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    } @else {
+      <!-- Estado vacío -->
+      <div class="empty-state">
+        <p>No hay resultados que coincidan.</p>
+      </div>
+    }
+  </section>
+
+  <!-- Sección catálogos -->
+  <section id="section-catalogos" role="tabpanel" [hidden]="activeTab !== 'catalogos'">
+    <div class="catalog-header">
+      <div class="view-switch" role="tablist" aria-label="Tipos de catálogo">
+        <button
+          type="button"
+          role="tab"
+          id="subtab-categories-btn"
+          [attr.aria-selected]="catalogSubtab === 'categories'"
+          [attr.aria-pressed]="catalogSubtab === 'categories'"
+          class="subtab-trigger"
+          (click)="catalogSubtab = 'categories'"
+        >
+          Categorías de daño
+        </button>
+        <button
+          type="button"
+          role="tab"
+          id="subtab-locations-btn"
+          [attr.aria-selected]="catalogSubtab === 'locations'"
+          [attr.aria-pressed]="catalogSubtab === 'locations'"
+          class="subtab-trigger"
+          (click)="catalogSubtab = 'locations'"
+        >
+          Ubicaciones
+        </button>
+      </div>
+      <button
+        type="button"
+        id="btn-new-catalog-item"
+        class="button button-small"
+        (click)="openNewCatalogModal()"
+      >
+        <svg
+          class="icon"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.7"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          aria-hidden="true"
+        >
+          <path d="M12 5v14M5 12h14" />
+        </svg>
+        <span>
+          {{ catalogSubtab === 'categories' ? 'Agregar categoría' : 'Agregar ubicación' }}
+        </span>
+      </button>
+    </div>
+
+    <div class="results-meta">
+      <p id="catalog-count" role="status">
+        Total: {{ activeCatalogList.length }} registros en el catálogo de
+        {{ catalogSubtab === 'categories' ? 'categorías' : 'ubicaciones' }}
+      </p>
+    </div>
+
+    @if (activeCatalogList.length > 0) {
+      <div class="table-wrapper" id="catalog-table-container">
+        <table class="admin-table">
+          <thead>
+            <tr>
+              <th scope="col">Nombre del registro</th>
+              <th scope="col">Tipo de catálogo</th>
+              <th scope="col">Estado</th>
+              <th scope="col">Acciones</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (item of activeCatalogList; track item.id) {
+              <tr>
+                <td>
+                  <strong>{{ item.name }}</strong>
+                </td>
+                <td>{{ catalogSubtab === 'categories' ? 'Categoría de daño' : 'Ubicación' }}</td>
+                <td>
+                  @if (item.active) {
+                    <span class="badge resolved">Activo</span>
+                  } @else {
+                    <span class="badge closed">Desactivado</span>
+                  }
+                </td>
+                <td>
+                  <div class="table-actions">
+                    <button
+                      type="button"
+                      class="button button-small button-outline"
+                      (click)="openEditCatalogModal(item)"
+                    >
+                      Editar
+                    </button>
+                    @if (item.active) {
+                      <button
+                        type="button"
+                        class="button button-small button-quiet"
+                        (click)="openDeactivateCatalogModal(item)"
+                      >
+                        Desactivar
+                      </button>
+                    } @else {
+                      <button
+                        type="button"
+                        class="button button-small button-quiet"
+                        (click)="reactivateCatalogItem(item)"
+                      >
+                        Reactivar
+                      </button>
+                    }
+                  </div>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    } @else {
+      <div class="empty-state">
+        <p>No hay resultados que coincidan.</p>
+      </div>
+    }
+  </section>
+
+  <!-- Sección respaldo y restauración -->
+  <section id="section-respaldo" role="tabpanel" [hidden]="activeTab !== 'respaldo'">
+    <div class="backup-grid">
+      <!-- Tarjeta de Respaldo -->
+      <article class="surface backup-card">
+        <div>
+          <p class="eyebrow">COPIA DE SEGURIDAD</p>
+          <h3>Generar respaldo</h3>
+          <p>
+            Descarga una copia de seguridad en formato JSON que contiene el estado actual de las
+            cuentas, catálogos e incidencias del campus.
+          </p>
+        </div>
+        <div>
+          <button
+            type="button"
+            id="btn-generate-backup"
+            [disabled]="backupBusy"
+            class="button"
+            (click)="generateBackup()"
+          >
+            <svg
+              class="icon"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.7"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              aria-hidden="true"
+            >
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3" />
+            </svg>
+            Generar respaldo
+          </button>
+        </div>
+      </article>
+
+      <!-- Tarjeta de Restauración -->
+      <article class="surface backup-card">
+        <div>
+          <p class="eyebrow">RECUPERACIÓN DE DATOS</p>
+          <h3>Reiniciar cuentas y catálogos</h3>
+          <p>
+            Reinicia únicamente las cuentas y los catálogos de demostración. Conserva las
+            incidencias. Esta acción requiere confirmación expresa.
+          </p>
+        </div>
+        <div>
+          <button
+            type="button"
+            id="btn-open-restore"
+            class="button button-outline"
+            (click)="showModalRestore = true"
+          >
+            <svg
+              class="icon"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.7"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              aria-hidden="true"
+            >
+              <path
+                d="M3 12a9 9 0 0 1 15-6.7L21 8M21 3v5h-5M21 12a9 9 0 0 1-15 6.7L3 16M3 21v-5h5"
+              />
+            </svg>
+            Restaurar
+          </button>
+        </div>
+      </article>
+    </div>
+  </section>
+
+  <!-- Formulario de crear y editar cuenta -->
+  @if (showModalAccount) {
+    <dialog class="modal" open aria-labelledby="modal-account-title">
+      <div class="modal-header">
+        <h2 id="modal-account-title">
+          {{ editingAccount?.id ? 'Editar cuenta' : 'Nueva cuenta' }}
+        </h2>
+        <button
+          type="button"
+          class="modal-close-btn"
+          (click)="showModalAccount = false"
+          aria-label="Cerrar modal"
+        >
+          &times;
+        </button>
+      </div>
+      <form (ngSubmit)="saveAccountForm()" novalidate>
+        <div class="field">
+          <label for="account-name">Nombre completo</label>
+          <input
+            type="text"
+            id="account-name"
+            [(ngModel)]="accountForm.name"
+            name="name"
+            placeholder="Ej. Carlos Alberto Gómez"
+            (ngModelChange)="accountErrors.name = ''"
+            [attr.aria-invalid]="!!accountErrors.name"
+          />
+          @if (accountErrors.name) {
+            <span class="field-error">{{ accountErrors.name }}</span>
+          }
+        </div>
+        <div class="field">
+          <label for="account-username">Usuario</label>
+          <input
+            type="text"
+            id="account-username"
+            [(ngModel)]="accountForm.username"
+            name="username"
+            placeholder="Ej. cgomez"
+            (ngModelChange)="accountErrors.username = ''"
+            [attr.aria-invalid]="!!accountErrors.username"
+          />
+          @if (accountErrors.username) {
+            <span class="field-error">{{ accountErrors.username }}</span>
+          }
+        </div>
+        <div class="field">
+          <label for="account-role">Perfil</label>
+          <select
+            id="account-role"
+            [(ngModel)]="accountForm.role"
+            name="role"
+            (ngModelChange)="accountErrors.role = ''"
+            [attr.aria-invalid]="!!accountErrors.role"
+          >
+            <option value="">Selecciona un perfil</option>
+            <option value="Ordenanza">Ordenanza</option>
+            <option value="Jefatura">Jefatura</option>
+            <option value="Mantenimiento">Mantenimiento</option>
+            <option value="Desarrollo Físico">Desarrollo Físico</option>
+            <option value="Autoridad">Autoridad</option>
+            <option value="Administrador">Administrador</option>
+          </select>
+          @if (accountErrors.role) {
+            <span class="field-error">{{ accountErrors.role }}</span>
+          }
+        </div>
+        <div class="field">
+          <label for="account-area">Área de trabajo</label>
+          <input
+            type="text"
+            id="account-area"
+            [(ngModel)]="accountForm.area"
+            name="area"
+            placeholder="Ej. Servicios Generales"
+            (ngModelChange)="accountErrors.area = ''"
+            [attr.aria-invalid]="!!accountErrors.area"
+          />
+          @if (accountErrors.area) {
+            <span class="field-error">{{ accountErrors.area }}</span>
+          }
+        </div>
+        <div class="modal-actions">
+          <button type="button" class="button button-quiet" (click)="showModalAccount = false">
+            Cancelar
+          </button>
+          <button type="submit" class="button">Guardar cuenta</button>
+        </div>
+      </form>
+    </dialog>
+  }
+
+  <!-- Formulario de confirmar desactivar cuenta -->
+  @if (accountPendingDeactivation) {
+    <dialog class="modal" open aria-labelledby="modal-deact-acc-title">
+      <div class="modal-header">
+        <h2 id="modal-deact-acc-title">Desactivar cuenta</h2>
+        <button
+          type="button"
+          class="modal-close-btn"
+          (click)="accountPendingDeactivation = null"
+          aria-label="Cerrar modal"
+        >
+          &times;
+        </button>
+      </div>
+      <div class="dialog-alert">
+        <strong>Aviso importante:</strong> La cuenta no podrá iniciar sesión en el sistema.
+        <strong
+          >El historial de incidencias y acciones de este usuario se conservará
+          íntegramente.</strong
+        >
+      </div>
+      <p>
+        ¿Confirmas la desactivación de la cuenta de
+        <strong
+          >{{ accountPendingDeactivation.name }} ({{ accountPendingDeactivation.username }})</strong
+        >?
+      </p>
+      <div class="modal-actions">
+        <button
+          type="button"
+          class="button button-quiet"
+          (click)="accountPendingDeactivation = null"
+        >
+          Cancelar
+        </button>
+        <button type="button" class="button" (click)="confirmDeactivateAccount()">
+          Desactivar cuenta
+        </button>
+      </div>
+    </dialog>
+  }
+
+  <!-- Formulario de crear y editar catálogo -->
+  @if (showModalCatalog) {
+    <dialog class="modal" open aria-labelledby="modal-catalog-title">
+      <div class="modal-header">
+        <h2 id="modal-catalog-title">
+          {{
+            editingCatalogItem?.id
+              ? 'Editar ' + (catalogSubtab === 'categories' ? 'categoría' : 'ubicación')
+              : 'Nueva ' + (catalogSubtab === 'categories' ? 'categoría de daño' : 'ubicación')
+          }}
+        </h2>
+        <button
+          type="button"
+          class="modal-close-btn"
+          (click)="showModalCatalog = false"
+          aria-label="Cerrar modal"
+        >
+          &times;
+        </button>
+      </div>
+      <form (ngSubmit)="saveCatalogForm()" novalidate>
+        <div class="field">
+          <label for="catalog-name">
+            Nombre de la {{ catalogSubtab === 'categories' ? 'categoría' : 'ubicación' }}
+          </label>
+          <input
+            type="text"
+            id="catalog-name"
+            [(ngModel)]="catalogFormName"
+            name="catalogName"
+            [placeholder]="
+              catalogSubtab === 'categories'
+                ? 'Ej. Redes e informática'
+                : 'Ej. Cancha de básquetbol'
+            "
+            (ngModelChange)="catalogError = ''"
+            [attr.aria-invalid]="!!catalogError"
+          />
+          @if (catalogError) {
+            <span class="field-error">{{ catalogError }}</span>
+          }
+        </div>
+        <div class="modal-actions">
+          <button type="button" class="button button-quiet" (click)="showModalCatalog = false">
+            Cancelar
+          </button>
+          <button type="submit" class="button">Guardar</button>
+        </div>
+      </form>
+    </dialog>
+  }
+
+  <!-- Formulario de confirmar desactivar ítem de catálogo -->
+  @if (catalogPendingDeactivation) {
+    <dialog class="modal" open aria-labelledby="modal-deact-cat-title">
+      <div class="modal-header">
+        <h2 id="modal-deact-cat-title">Desactivar registro del catálogo</h2>
+        <button
+          type="button"
+          class="modal-close-btn"
+          (click)="catalogPendingDeactivation = null"
+          aria-label="Cerrar modal"
+        >
+          &times;
+        </button>
+      </div>
+      <div class="dialog-alert">
+        <strong>Aviso:</strong> Este elemento ya no estará disponible para nuevos reportes, pero
+        <strong>el historial de reportes asociados se conservará intacto</strong>.
+      </div>
+      <p>
+        ¿Confirmas la desactivación de <strong>"{{ catalogPendingDeactivation.name }}"</strong>?
+      </p>
+      <div class="modal-actions">
+        <button
+          type="button"
+          class="button button-quiet"
+          (click)="catalogPendingDeactivation = null"
+        >
+          Cancelar
+        </button>
+        <button type="button" class="button" (click)="confirmDeactivateCatalogItem()">
+          Desactivar elemento
+        </button>
+      </div>
+    </dialog>
+  }
+
+  <!-- Formulario de confirmar restauración -->
+  @if (showModalRestore) {
+    <dialog class="modal" open aria-labelledby="modal-restore-title">
+      <div class="modal-header">
+        <h2 id="modal-restore-title">Confirmar restauración</h2>
+        <button
+          type="button"
+          class="modal-close-btn"
+          (click)="showModalRestore = false"
+          aria-label="Cerrar modal"
+        >
+          &times;
+        </button>
+      </div>
+      <div class="dialog-alert">
+        <strong>Advertencia:</strong> Esta acción
+        <strong>reinicia las cuentas y los catálogos locales</strong>
+        con la configuración inicial de ejemplo. Las incidencias se conservan.
+      </div>
+      <p>
+        ¿Deseas proceder con la restauración de cuentas y catálogos a los valores predeterminados?
+      </p>
+      <div class="modal-actions">
+        <button type="button" class="button button-quiet" (click)="showModalRestore = false">
+          Cancelar
+        </button>
+        <button type="button" class="button" (click)="confirmRestoreDefaults()">
+          Confirmar restauración
+        </button>
+      </div>
+    </dialog>
+  }
+  @if (activeTab === 'respaldo') {
+    <section class="wrap">
+      <h2>Restaurar respaldo completo</h2>
+      <p>
+        El archivo reemplaza los datos locales y cierra la sesión. Conserva antes una copia actual.
+      </p>
+      <label
+        >Archivo JSON<input
+          type="file"
+          accept="application/json,.json"
+          (change)="backupFile = $any($event.target).files[0]" /></label
+      ><button class="button" (click)="restoreBackup()" [disabled]="!backupFile || backupBusy">
+        Confirmar reemplazo desde archivo
+      </button>
+      <p role="status">{{ backupStatus }}</p>
+    </section>
+  }
+</main>

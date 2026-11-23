@@ -2,9 +2,9 @@ import { Component, signal, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { NavigationEnd, Router, RouterOutlet } from '@angular/router';
 import { filter } from 'rxjs/operators';
-import { HeaderComponent } from './shared/components/header/header.component';
-import { FooterComponent } from './shared/components/footer/footer.component';
-import { ToastComponent } from './shared/components/toast/toast.component';
+import { HeaderComponent } from './presentation/shared/components/header/header.component';
+import { FooterComponent } from './presentation/shared/components/footer/footer.component';
+import { ToastComponent } from './presentation/shared/components/toast/toast.component';
 
 @Component({
   selector: 'app-root',

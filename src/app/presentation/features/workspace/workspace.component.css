@@ -1,0 +1,161 @@
+.workspace {
+  padding-block: 32px 64px;
+}
+.workspace-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 20px;
+}
+.eyebrow {
+  color: #a60000;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+}
+.notice {
+  padding: 16px;
+  background: #fff6e8;
+  border-left: 4px solid #b67719;
+  border-radius: 6px;
+}
+.metrics {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 12px;
+  margin: 24px 0;
+}
+.metric {
+  background: white;
+  border: 1px solid #ddd;
+  border-radius: 12px;
+  text-align: left;
+  padding: 18px;
+  cursor: pointer;
+}
+.metric strong {
+  display: block;
+  font-size: 30px;
+  color: #a60000;
+}
+.metric span {
+  font-size: 13px;
+}
+.tabs {
+  display: flex;
+  gap: 12px;
+  border-bottom: 1px solid #ddd;
+  margin-bottom: 20px;
+}
+.tabs button {
+  padding: 16px;
+  background: white;
+  border: 0;
+  cursor: pointer;
+}
+.tabs .active {
+  border-bottom: 3px solid #a60000;
+  color: #a60000;
+}
+.filter-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  background: #fff;
+  padding: 20px;
+  border: 1px solid #ddd;
+  border-radius: 12px;
+}
+label {
+  display: grid;
+  gap: 7px;
+}
+input,
+select,
+textarea {
+  width: 100%;
+  min-width: 0;
+  padding: 10px;
+  border: 1px solid #aaa;
+  border-radius: 6px;
+  font: inherit;
+}
+.report-list {
+  display: grid;
+  gap: 14px;
+}
+.report-card,
+.panel {
+  background: #fff;
+  border: 1px solid #ddd;
+  border-radius: 12px;
+  padding: 24px;
+}
+.report-card {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 20px;
+}
+.report-card h2 {
+  font-size: 20px;
+  margin: 10px 0;
+}
+.report-card p {
+  overflow-wrap: anywhere;
+}
+.badge {
+  background: #f4eeee;
+  padding: 5px 10px;
+  border-radius: 20px;
+}
+.detail {
+  margin-top: 24px;
+  border-top: 4px solid #a60000;
+}
+.columns {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+}
+.photos {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+.photos img {
+  width: 150px;
+  height: 120px;
+  object-fit: cover;
+  border-radius: 8px;
+}
+.edit-form {
+  display: grid;
+  gap: 16px;
+  margin-top: 24px;
+  max-width: 650px;
+}
+button:focus-visible,
+a:focus-visible {
+  outline: 3px solid #145cc5;
+  outline-offset: 3px;
+}
+@media (max-width: 768px) {
+  .metrics {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .filter-grid,
+  .columns {
+    grid-template-columns: 1fr;
+  }
+  .report-card,
+  .workspace-heading {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+  .report-card .button {
+    width: 100%;
+  }
+  .workspace {
+    padding-inline: 16px;
+  }
+}

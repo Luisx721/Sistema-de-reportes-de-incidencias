@@ -45,3 +45,14 @@ Thumbs.db
 
 /playwright-report/
 /test-results/
+
+# Salidas de .NET y archivos locales con secretos
+**/bin/
+**/obj/
+**/TestResults/
+**/secrets.json
+**/appsettings.*.local.json
+**/*.user
+**/*.suo
+*.tmp
+*.log

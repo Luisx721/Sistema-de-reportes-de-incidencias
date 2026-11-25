@@ -1,0 +1,315 @@
+@host = https://localhost:7035
+@idAuditoriaPrueba = -1
+@idIncidenciaAuditoria = 1
+GET {{host}}/api/roles
+
+###
+
+POST {{host}}/api/rol
+Content-Type: application/json
+
+{
+  "nombre": "Administrador",
+  "descripcion": "Gestiona cuentas, categorías y ubicaciones del sistema"
+}
+
+###
+
+GET {{host}}/api/rol/1
+
+###
+
+PUT {{host}}/api/rol/1
+Content-Type: application/json
+
+{
+  "nombre": "Administrador",
+  "descripcion": "Gestiona cuentas, categorías y ubicaciones",
+  "activo": true
+}
+
+###
+
+DELETE {{host}}/api/rol/1
+
+@host = https://localhost:7035
+
+GET {{host}}/api/areas
+
+###
+POST {{host}}/api/area
+Content-Type: application/json
+
+{ "nombre": "Mantenimiento", "tipo": "Operativa", "esResponsable": true }
+
+###
+PATCH {{host}}/api/area/1
+Content-Type: application/json
+
+{ "tipo": "Técnica" }
+
+###
+GET {{host}}/api/area/999
+
+###
+GET {{host}}/api/edificios
+
+###
+POST {{host}}/api/edificio
+Content-Type: application/json
+
+{ "nombre": "Edificio B" }
+
+###
+PATCH {{host}}/api/edificio/1
+Content-Type: application/json
+
+{ "activo": false }
+
+###
+GET {{host}}/api/edificio/999
+
+
+###
+GET {{host}}/api/categorias
+
+###
+POST {{host}}/api/categoria
+Content-Type: application/json
+
+{ "idArea": 1, "nombre": "Plomería", "descripcion": "Fugas y tuberías" }
+
+###
+POST {{host}}/api/categoria
+Content-Type: application/json
+
+{ "idArea": 999, "nombre": "Electricidad" }
+
+###
+PATCH {{host}}/api/categoria/1
+Content-Type: application/json
+
+{ "descripcion": "Fugas, tuberías y grifos" }
+
+###
+GET {{host}}/api/categoria/999
+
+###
+GET {{host}}/api/ubicaciones
+
+###
+POST {{host}}/api/ubicacion
+Content-Type: application/json
+
+{ "idEdificio": 1, "nombre": "Aula 1", "tipo": "Aula" }
+
+###
+POST {{host}}/api/ubicacion
+Content-Type: application/json
+
+{ "idEdificio": 999, "nombre": "Aula 2" }
+
+###
+PATCH {{host}}/api/ubicacion/1
+Content-Type: application/json
+
+{ "tipo": "Laboratorio" }
+
+###
+GET {{host}}/api/ubicacion/999
+
+###
+GET {{host}}/api/usuarios
+
+###
+POST {{host}}/api/usuario
+Content-Type: application/json
+
+{ "idRol": 1, "nombre": "Jeremias", "correo": "jeremias@ues.edu.sv", "password": "Clave12345", "vinculo": "Estudiante" }
+
+###
+POST {{host}}/api/usuario
+Content-Type: application/json
+
+{ "idRol": 999, "nombre": "Prueba", "correo": "prueba@ues.edu.sv", "password": "Clave12345", "vinculo": "Docente" }
+
+###
+PATCH {{host}}/api/usuario/1
+Content-Type: application/json
+
+{ "vinculo": "Docente" }
+
+###
+GET {{host}}/api/usuario/999
+
+###
+GET {{host}}/api/incidencias
+
+###
+POST {{host}}/api/incidencia
+Content-Type: application/json
+
+{ "idCategoria": 1, "idUbicacion": 1, "reportanteNombre": "Ana", "reportanteVinculo": "Estudiante", "descripcion": "Fuga de agua en la entrada del aula", "urgencia": "Alta", "modalidadOrigen": "Comunitario" }
+
+###
+POST {{host}}/api/incidencia
+Content-Type: application/json
+
+{ "idCategoria": 1, "idUbicacion": 1, "reportanteNombre": "Luis", "reportanteVinculo": "Docente", "descripcion": "Otra vez la fuga de agua en el aula", "urgencia": "Media", "modalidadOrigen": "Comunitario" }
+
+###
+GET {{host}}/api/incidencia/codigo/INC2026001
+
+###
+GET {{host}}/api/incidencia/999
+
+###
+GET {{host}}/api/historiales?idIncidencia=1
+
+###
+POST {{host}}/api/historial
+Content-Type: application/json
+
+{ "idIncidencia": 1, "idUsuarioEncargado": 1, "estado": "Resuelto", "observacion": "Se reparó la tubería de la entrada" }
+
+###
+POST {{host}}/api/historial
+Content-Type: application/json
+
+{ "idIncidencia": 1, "idUsuarioEncargado": 1, "estado": "En proceso", "observacion": "Intento reabrir una ya cerrada" }
+
+###
+POST {{host}}/api/historial
+Content-Type: application/json
+
+{ "idIncidencia": 999, "idUsuarioEncargado": 1, "estado": "En proceso", "observacion": "Incidencia que no existe" }
+
+###
+GET {{host}}/api/historial/999
+
+###
+
+@idIncidencia = 1
+@idFoto = -1
+
+### 1. Elegir una incidencia de prueba y copiar su ID en @idIncidencia
+GET {{host}}/api/incidencias
+
+### 2. Listar sus fotografías. Esperado: 200 y una lista vacía si no tiene fotos
+GET {{host}}/api/fotografias?idIncidencia={{idIncidencia}}
+
+### 3. Agregar una fotografía PNG. Esperado: 201 Created
+POST {{host}}/api/fotografia/json
+Content-Type: application/json
+
+{
+  "idIncidencia": {{idIncidencia}},
+  "nombreArchivo": "prueba.png",
+  "contenido": "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAADElEQVR4nGNgyFsAAAGAAQ+F+P27AAAAAElFTkSuQmCC"
+}
+
+### 4. Verificar que la fotografía aparece en la lista. Esperado: 200
+GET {{host}}/api/fotografias?idIncidencia={{idIncidencia}}
+
+### 5. Abrir la imagen usando el idFoto del paso 3. Esperado: 200, image/png
+GET {{host}}/api/fotografia/{{idFoto}}/archivo
+
+### 6. Intentar subir texto como si fuera una imagen PNG. Esperado: 400
+POST {{host}}/api/fotografia/json
+Content-Type: application/json
+
+{
+  "idIncidencia": {{idIncidencia}},
+  "nombreArchivo": "invalida.png",
+  "contenido": "aG9sYQ=="
+}
+
+### 7. Consultar fotos de una incidencia inexistente. Esperado: 404
+GET {{host}}/api/fotografias?idIncidencia=2147483647
+
+### 8. Consultar una fotografía inexistente. Esperado: 404
+GET {{host}}/api/fotografia/2147483647/archivo
+
+### 9. Consultar los datos de la fotografía creada. Esperado: 200
+GET {{host}}/api/fotografia/{{idFoto}}
+
+### 10. Reemplazar la imagen de prueba. Esperado: 200 con el mismo idFoto
+PUT {{host}}/api/fotografia/{{idFoto}}
+Content-Type: application/json
+
+{
+  "nombreArchivo": "reemplazo.png",
+  "contenido": "iVBORw0KGgoAAAANSUhEUgAAAAwAAAAMCAIAAADZF8uwAAAAFUlEQVR4nGO8w8VAEDARVjKqiP6KAKSTAP4I5/OoAAAAAElFTkSuQmCC"
+}
+
+### 11. Verificar el reemplazo. El idFoto y el orden se conservan y tamanoBytes vale 78
+GET {{host}}/api/fotografia/{{idFoto}}
+
+### 12. Eliminar la fotografía de prueba. Esperado: 204 No Content
+DELETE {{host}}/api/fotografia/{{idFoto}}
+
+### 13. Comprobar que se eliminó. Esperado: 404
+GET {{host}}/api/fotografia/{{idFoto}}
+
+### 14. Listar las fotografías restantes de la incidencia. Esperado: 200
+GET {{host}}/api/fotografias?idIncidencia={{idIncidencia}}
+
+
+  ###
+
+@idAuditoriaPrueba = -1
+@idIncidenciaAuditoria = 1
+
+### 1. Crear un evento de prueba. Esperado: 201 Created
+POST {{host}}/api/auditoria
+Content-Type: application/json
+
+{
+  "idRegistro": 1,
+  "accion": "UPDATE",
+  "valorAnterior": "Prioridad baja",
+  "valorNuevo": "Prioridad media"
+}
+
+### 2. Listar los eventos de prueba. Esperado: 200
+GET {{host}}/api/auditorias?tabla=prueba_auditoria
+
+### 3. Consultar el evento creado usando su idAuditoria. Esperado: 200
+GET {{host}}/api/auditoria/{{idAuditoriaPrueba}}
+
+### 4. Actualizar el evento de prueba. Esperado: 204
+PUT {{host}}/api/auditoria/{{idAuditoriaPrueba}}
+Content-Type: application/json
+
+{
+  "idRegistro": 1,
+  "accion": "UPDATE",
+  "valorAnterior": "Prioridad baja",
+  "valorNuevo": "Prioridad alta"
+}
+
+### 5. Comprobar que valorNuevo ahora dice "Prioridad alta"
+GET {{host}}/api/auditoria/{{idAuditoriaPrueba}}
+
+### 6. Eliminar el evento de prueba. Esperado: 204
+DELETE {{host}}/api/auditoria/{{idAuditoriaPrueba}}
+
+### 7. Confirmar que se eliminó. Esperado: 404
+GET {{host}}/api/auditoria/{{idAuditoriaPrueba}}
+
+### 8. Elegir una incidencia de prueba y copiar su ID en @idIncidenciaAuditoria
+GET {{host}}/api/incidencias
+
+### 9. Consultar la auditoría de esa incidencia antes del cambio
+GET {{host}}/api/auditorias?tabla=incidencias&idRegistro={{idIncidenciaAuditoria}}
+
+### 10. Cambiar la prioridad. Si ya tiene "Alta", usar "Media"
+PATCH {{host}}/api/incidencia/{{idIncidenciaAuditoria}}
+Content-Type: application/json
+
+{
+  "prioridad": "Alta"
+}
+
+### 11. Ver el evento que PostgreSQL creó automáticamente
+GET {{host}}/api/auditorias?tabla=incidencias&idRegistro={{idIncidenciaAuditoria}}

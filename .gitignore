@@ -56,3 +56,12 @@ Thumbs.db
 **/*.suo
 *.tmp
 *.log
+# Backend .NET / Visual Studio
+bin/
+obj/
+.vs/
+*.user
+App_Data/
+.env
+.env.*
+!.env.example

@@ -1,4 +1,4 @@
-import { ChangeDetectorRef, Component, inject, OnDestroy, OnInit } from '@angular/core';
+import { ChangeDetectorRef, Component, HostListener, inject, OnDestroy, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { AuthService } from '../../../application/services/auth.service';
@@ -153,10 +153,18 @@ export class WorkspaceComponent implements OnInit, OnDestroy {
     this.note = '';
     this.message = '';
     this.photos = report.photos.map((p) => URL.createObjectURL(p));
+    this.changeDetector.markForCheck();
   }
   close(): void {
     this.releasePhotos();
     this.selected = null;
+    this.changeDetector.markForCheck();
+  }
+  @HostListener('document:keydown.escape')
+  onEscape(): void {
+    if (this.selected) {
+      this.close();
+    }
   }
   private releasePhotos(): void {
     this.photos.forEach((p) => URL.revokeObjectURL(p));

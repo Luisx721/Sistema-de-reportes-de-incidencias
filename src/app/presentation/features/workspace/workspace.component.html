@@ -126,11 +126,25 @@
     </section>
   }
   @if (selected; as report) {
-    <section class="panel detail" aria-label="Expediente seleccionado">
-      <header class="workspace-heading">
-        <h2>Expediente {{ report.code }}</h2>
-        <button class="button button-outline" (click)="close()">Cerrar expediente</button>
-      </header>
+    <div
+      class="expediente-modal-overlay"
+      (click)="close()"
+      role="presentation"
+    >
+      <section
+        class="panel detail"
+        aria-label="Expediente seleccionado"
+        role="dialog"
+        aria-modal="true"
+        (click)="$event.stopPropagation()"
+      >
+        <header class="workspace-heading">
+          <h2>Expediente {{ report.code }}</h2>
+          <button class="button button-outline" (click)="close()">Cerrar expediente</button>
+        </header>
+        @if (message) {
+          <p role="status" class="notice">{{ message }}</p>
+        }
       <p>{{ report.category }} · {{ data.locationName(report.location) }} · {{ report.state }}</p>
       <p>{{ report.description }}</p>
       <p>Referencia {{ report.reference || 'Sin referencia' }}</p>
@@ -197,5 +211,6 @@
         </p>
       }
     </section>
-  }
+  </div>
+}
 </main>

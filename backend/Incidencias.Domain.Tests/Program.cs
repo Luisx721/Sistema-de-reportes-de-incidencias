@@ -11,6 +11,7 @@ void Rejects(Action action, string message) { checks++; try { action(); } catch 
 // ==========================================
 // 1. Permisos y Competencia Técnica (IncidentRules)
 // ==========================================
+// Verifica edición por área/estado final, registro asistido por rol y acceso a administración.
 Check(IncidentRules.CanEdit("Mantenimiento", "", "", "", "Electricidad", "Recibido"), "El técnico competente debe poder editar.");
 Check(!IncidentRules.CanEdit("Administrador", "", "", "", "Electricidad", "Recibido"), "Administrador no debe obtener competencia técnica universal.");
 Check(!IncidentRules.CanEdit("Mantenimiento", "", "", "", "Electricidad", "Resuelto"), "Un expediente final no se debe poder editar.");
@@ -24,6 +25,7 @@ Check(!IncidentRules.CanManageAdministration("Jefatura"), "Otros roles no gestio
 // ==========================================
 // 2. Transiciones y Validaciones de Modificación
 // ==========================================
+// Comprueba transiciones de estado válidas/inválidas, longitud mínima de observación y prioridad.
 IncidentRules.ValidateChange("Recibido", "En proceso", "Alta", "Inspección realizada");
 Rejects(() => IncidentRules.ValidateChange("Recibido", "Resuelto", "Alta", "Inspección realizada"), "Debe rechazar transiciones inválidas.");
 Rejects(() => IncidentRules.ValidateChange("Recibido", "En proceso", "Alta", "corto"), "Debe exigir observación.");
@@ -32,6 +34,7 @@ Rejects(() => IncidentRules.ValidateChange("Recibido", "En proceso", "Urgente", 
 // ==========================================
 // 3. Normalizaciones y Reglas de Entrada (RF-02, RF-04, RF-06)
 // ==========================================
+// Valida límites de descripción, valores permitidos de urgencia y vínculo del reportante.
 Rejects(() => IncidentRules.NormalizeDescription("muy corta"), "Descripción menor a 20 chars debe rechazarse.");
 Check(IncidentRules.NormalizeDescription("Esta es una descripción suficientemente detallada para el reporte.").Length >= 20, "Descripción válida.");
 Check(IncidentRules.NormalizeUrgency("Alta") == "Alta", "Urgencia válida.");
@@ -43,6 +46,7 @@ Rejects(() => IncidentRules.NormalizeReporterLink("Infiltrado"), "Vínculo invá
 // ==========================================
 // 4. Privacidad del Seguimiento Público
 // ==========================================
+// Garantiza que PublicStatusDto oculte identidad, notas internas, detalle y referencia al consultar por código.
 var privateNote = "Reporte recibido por Luis Pérez, teléfono 7777-1234.";
 var publicStatus = IncidentContractMapper.ToPublicStatus(new IncidentDto(
     "UES001", "Electricidad", "Biblioteca", "Detalle privado", "En proceso",
@@ -56,8 +60,33 @@ Check(!json.Contains("Luis Pérez") && !json.Contains("7777-1234") && !json.Cont
 Check(typeof(IIncidentStore).GetMethod(nameof(IIncidentStore.TrackAsync)) is not null, "Seguimiento público no depende de una sesión.");
 
 // ==========================================
+// 4b. Privacidad de la respuesta de creación (duplicado)
+// ==========================================
+// Valida que ToCreateResult no filtre datos del caso previo ni identidad en respuestas de creación/duplicado.
+var duplicateIncident = new IncidentDto(
+    "UES001", "Electricidad", "Biblioteca", "Detalle privado", "En proceso",
+    DateTimeOffset.UtcNow, "Referencia reservada", "Alta", "Mantenimiento", 2,
+    [new(DateTimeOffset.UtcNow, "Recibido", privateNote)],
+    Urgency: "Alta", Closed: null, ReporterName: "Luis Pérez", ReporterLink: "Estudiante",
+    IsDuplicate: true);
+
+var createResult = IncidentContractMapper.ToCreateResult(duplicateIncident);
+var createJson = JsonSerializer.Serialize(createResult);
+Check(createResult.Code == "UES001" && createResult.IsDuplicate, "El duplicado debe devolver el código permitido y el aviso.");
+Check(createResult.Message.Contains("Ya existe"), "El duplicado debe llevar mensaje de aviso.");
+Check(!createJson.Contains("reporter", StringComparison.OrdinalIgnoreCase), "La creación no debe incluir campos de identidad.");
+Check(!createJson.Contains("Luis") && !createJson.Contains("7777-1234"), "La creación no debe filtrar nombre ni teléfono.");
+Check(!createJson.Contains("Detalle privado") && !createJson.Contains("Referencia reservada"), "La creación no debe filtrar descripción ni referencia.");
+Check(!createJson.Contains("history", StringComparison.OrdinalIgnoreCase) && !createJson.Contains("Mantenimiento"), "La creación no debe filtrar historial ni unidad.");
+
+// Comprueba también la respuesta normal cuando no hay coincidencia de duplicado.
+var normalResult = IncidentContractMapper.ToCreateResult(duplicateIncident with { IsDuplicate = false });
+Check(!normalResult.IsDuplicate && normalResult.Message == "Reporte recibido.", "El caso sin duplicado debe seguir funcionando.");
+
+// ==========================================
 // 5. Filtros y Fechas en Zona Horaria de El Salvador
 // ==========================================
+// Verifica rechazo de rangos invertidos y conversión de inicio/fin de día local a UTC (UTC-6).
 Rejects(() => IncidentFilterRules.Validate(new IncidentFilterDto(null, null, null, null, new DateOnly(2026, 2, 2), new DateOnly(2026, 2, 1))), "El rango de fechas invertido debe rechazarse.");
 var dayStart = IncidentFilterRules.StartOfDay(new DateOnly(2026, 1, 1));
 Check(dayStart == new DateTimeOffset(2026, 1, 1, 6, 0, 0, TimeSpan.Zero), "Medianoche de El Salvador debe convertirse a UTC correctamente.");
@@ -67,13 +96,13 @@ Check(nextDayStart == new DateTimeOffset(2026, 1, 2, 6, 0, 0, TimeSpan.Zero), "E
 // ==========================================
 // 6. Seguridad de Contraseñas (PasswordHasher - RF-22)
 // ==========================================
+// Comprueba hashing PBKDF2, verificación de clave correcta/incorrecta y longitud mínima.
 var password = "PasswordSegura123!";
 var hashed = PasswordHasher.Hash(password);
 Check(hashed.StartsWith("pbkdf2$210000$"), "El formato debe ser PBKDF2 con 210,000 iteraciones.");
 Check(PasswordHasher.Verify(password, hashed), "La contraseña original debe verificar correctamente.");
 Check(!PasswordHasher.Verify("WrongPassword!", hashed), "Una contraseña incorrecta debe fallar la verificación.");
 Rejects(() => PasswordHasher.Hash("corta"), "Contraseña menor a 8 caracteres debe rechazarse.");
-
 // ==========================================
 // 7. Fotografías y Magic Bytes (PhotoRules - RF-03)
 // ==========================================

@@ -26,8 +26,10 @@ public sealed record IncidentDto(
     public string? RequesterArea { get; init; }
 }
 
+// Registro individual del historial de cambios de una incidencia.
 public sealed record HistoryDto(DateTimeOffset Date, string State, string Note);
 
+// Datos enviados al registrar una nueva incidencia (pública o asistida).
 public sealed record CreateIncidentDto(
     string Category,
     string Location,
@@ -35,17 +37,25 @@ public sealed record CreateIncidentDto(
     string? Reference = null,
     string? Urgency = null,
     string? ReporterName = null,
-    string? ReporterLink = null);
+    string? ReporterLink = null); // Vínculo opcional del reportante (ej. Estudiante).
 
+// Relación entre una categoría activa y la unidad responsable de atenderla (RF-01).
+public sealed record CategoryUnitDto(string Category, string ResponsibleUnit);
+
+// Catálogos públicos activos que consumen los formularios y la guía de ayuda.
 public sealed record IncidentCatalogsDto(IReadOnlyList<string> Categories, IReadOnlyList<string> Locations)
 {
     public IReadOnlyList<string> Urgencies { get; init; } = ["Baja", "Media", "Alta"];
+    public IReadOnlyList<CategoryUnitDto> CategoryUnits { get; init; } = [];
 }
 
+// Datos para actualizar estado y prioridad; Version controla concurrencia optimista (HTTP 409).
 public sealed record ChangeIncidentDto(string State, string Priority, string Note, long Version);
 
+// Credenciales enviadas al iniciar sesión.
 public sealed record LoginDto(string Username, string Password);
 
+// Información de la sesión activa devuelta tras autenticarse.
 public sealed record SessionDto(
     string Token,
     string Name,
@@ -53,7 +63,8 @@ public sealed record SessionDto(
     string? Area,
     DateTimeOffset ExpiresAt,
     int? UserId = null);
-// DTO para consultar públicamente el estado de una incidencia.
+
+// Resumen público para consultar el seguimiento sin exponer datos personales ni notas internas.
 public sealed record PublicStatusDto(
     string Code,
     string Category,

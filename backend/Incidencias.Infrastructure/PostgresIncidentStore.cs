@@ -121,13 +121,27 @@ public sealed class PostgresIncidentStore : IIncidentStore, IAccountStore, ICata
     // Catálogos Públicos
     // ==========================================
 
+    // Obtiene categorías activas con su área responsable (RF-01) y ubicaciones activas.
     public async Task<IncidentCatalogsDto> GetCatalogsAsync(CancellationToken ct)
     {
         await using var db = await Open(ct);
+
+        // Conserva Categories como lista de nombres para no romper el frontend y agrega CategoryUnits con su unidad.
         var categories = new List<string>();
-        await using (var cmd = new NpgsqlCommand("SELECT c.c_nombre FROM categorias c WHERE c.c_activo ORDER BY c.c_nombre", db))
+        var categoryUnits = new List<CategoryUnitDto>();
+        await using (var cmd = new NpgsqlCommand(
+            @"SELECT c.c_nombre, COALESCE(a.a_nombre, '')
+            FROM categorias c
+            LEFT JOIN areas a ON a.id_area = c.id_area
+            WHERE c.c_activo
+            ORDER BY c.c_nombre", db))
         await using (var rd = await cmd.ExecuteReaderAsync(ct))
-            while (await rd.ReadAsync(ct)) categories.Add(rd.GetString(0));
+            while (await rd.ReadAsync(ct))
+            {
+                var catName = rd.GetString(0);
+                categories.Add(catName);
+                categoryUnits.Add(new CategoryUnitDto(catName, rd.GetString(1)));
+            }
 
         var locations = new List<string>();
         await using (var cmd = new NpgsqlCommand(
@@ -139,7 +153,7 @@ public sealed class PostgresIncidentStore : IIncidentStore, IAccountStore, ICata
         await using (var rd = await cmd.ExecuteReaderAsync(ct))
             while (await rd.ReadAsync(ct)) locations.Add(rd.GetString(0));
 
-        return new IncidentCatalogsDto(categories, locations);
+        return new IncidentCatalogsDto(categories, locations) { CategoryUnits = categoryUnits };
     }
 
     // ==========================================
@@ -148,6 +162,7 @@ public sealed class PostgresIncidentStore : IIncidentStore, IAccountStore, ICata
 
     public Task<IncidentDto> CreateAsync(CreateIncidentDto q, CancellationToken ct) => CreateAsync(q, null, ct);
 
+    // Normaliza los datos de entrada y delega la inserción/detección de duplicados a fn_registrar_incidencia.
     public async Task<IncidentDto> CreateAsync(CreateIncidentDto q, SessionDto? session, CancellationToken ct)
     {
         var description = IncidentRules.NormalizeDescription(q.Description);

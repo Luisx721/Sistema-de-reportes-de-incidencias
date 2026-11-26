@@ -1,0 +1,41 @@
+﻿ total_incidencias 
+-------------------
+              5000
+(1 row)
+
+              indexname               |                                                     indexdef                                                      
+--------------------------------------+-------------------------------------------------------------------------------------------------------------------
+ idx_incidencias_categoria            | CREATE INDEX idx_incidencias_categoria ON public.incidencias USING btree (id_categoria)
+ idx_incidencias_estado               | CREATE INDEX idx_incidencias_estado ON public.incidencias USING btree (i_estado_actual)
+ idx_incidencias_fecha_cierre         | CREATE INDEX idx_incidencias_fecha_cierre ON public.incidencias USING btree (i_fecha_cierre)
+ idx_incidencias_fecha_creacion       | CREATE INDEX idx_incidencias_fecha_creacion ON public.incidencias USING btree (i_fecha_creacion)
+ idx_incidencias_ubicacion            | CREATE INDEX idx_incidencias_ubicacion ON public.incidencias USING btree (id_ubicacion)
+ incidencias_i_codigo_seguimiento_key | CREATE UNIQUE INDEX incidencias_i_codigo_seguimiento_key ON public.incidencias USING btree (i_codigo_seguimiento)
+ incidencias_pkey                     | CREATE UNIQUE INDEX incidencias_pkey ON public.incidencias USING btree (id_incidencia)
+(7 rows)
+
+ANALYZE
+                                                                       QUERY PLAN                                                                        
+---------------------------------------------------------------------------------------------------------------------------------------------------------
+ Index Scan Backward using idx_incidencias_fecha_creacion on incidencias  (cost=0.29..97.43 rows=73 width=31) (actual time=0.063..0.439 rows=73 loops=1)
+   Index Cond: (i_fecha_creacion >= (CURRENT_DATE - '30 days'::interval))
+   Filter: ((i_estado_actual)::text = 'Recibido'::text)
+   Rows Removed by Filter: 1384
+   Buffers: shared hit=56
+ Planning:
+   Buffers: shared hit=36
+ Planning Time: 0.304 ms
+ Execution Time: 0.455 ms
+(9 rows)
+
+                                                                       QUERY PLAN                                                                        
+---------------------------------------------------------------------------------------------------------------------------------------------------------
+ Index Scan Backward using idx_incidencias_fecha_creacion on incidencias  (cost=0.29..54.51 rows=38 width=31) (actual time=0.027..0.292 rows=39 loops=1)
+   Index Cond: (i_fecha_creacion >= (CURRENT_DATE - '1 day'::interval))
+   Filter: ((i_estado_actual)::text = 'Recibido'::text)
+   Rows Removed by Filter: 722
+   Buffers: shared hit=31
+ Planning Time: 0.123 ms
+ Execution Time: 0.307 ms
+(7 rows)
+

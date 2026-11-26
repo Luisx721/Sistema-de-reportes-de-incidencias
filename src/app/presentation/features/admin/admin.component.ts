@@ -1,5 +1,5 @@
 import { BackupService } from '../../../application/services/backup.service';
-import { ChangeDetectorRef, Component, inject } from '@angular/core';
+import { ChangeDetectorRef, Component, HostListener, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { AdminService } from '../../../application/services/admin.service';
@@ -46,6 +46,16 @@ export class AdminComponent {
   catalogPendingDeactivation: CatalogItem | null = null;
 
   showModalRestore = false;
+
+  @HostListener('document:keydown.escape')
+  onEscape(): void {
+    if (this.showModalAccount) this.showModalAccount = false;
+    if (this.accountPendingDeactivation) this.accountPendingDeactivation = null;
+    if (this.showModalCatalog) this.showModalCatalog = false;
+    if (this.catalogPendingDeactivation) this.catalogPendingDeactivation = null;
+    if (this.showModalRestore) this.showModalRestore = false;
+    this.changeDetector.markForCheck();
+  }
 
   get filteredAccounts(): Account[] {
     const s = this.accountSearch.trim().toLowerCase();

@@ -28,7 +28,14 @@ export class IncidenciasComponent implements OnInit, AfterViewInit, OnDestroy {
   private changeDetector = inject(ChangeDetectorRef);
 
   loadError = '';
+  catalogsLoading = false;
+  catalogsError = '';
   mapError = '';
+  get listingNotice(): string {
+    return this.dataService.demoMode
+      ? 'Explora ejemplos y reportes guardados en este navegador. Esta vista no representa información real de la universidad.'
+      : 'La API Rol 2 no expone un listado público de incidencias. Usa el código de seguimiento para consultar un expediente.';
+  }
   dataService = inject(DataService);
   private route = inject(ActivatedRoute);
   private router = inject(Router);
@@ -59,6 +66,16 @@ export class IncidenciasComponent implements OnInit, AfterViewInit, OnDestroy {
       });
 
       try {
+        if (!this.dataService.demoMode) {
+          this.catalogsLoading = true;
+          try { await this.dataService.loadCatalogs(); }
+          catch { this.catalogsError = 'No se pudieron cargar los catálogos desde la API.'; }
+          finally { this.catalogsLoading = false; }
+        }
+        if (!this.dataService.demoMode) {
+          this.loadError = 'La API Rol 2 no expone un listado público. Consulta el expediente con su código de seguimiento.';
+          return;
+        }
         await this.dataService.seed();
         const reports = await this.dataService.getReports();
         reports.sort((a, b) => b.created.localeCompare(a.created));
@@ -70,6 +87,13 @@ export class IncidenciasComponent implements OnInit, AfterViewInit, OnDestroy {
     } finally {
       this.changeDetector.markForCheck();
     }
+  }
+
+  async retryCatalogs(): Promise<void> {
+    this.catalogsLoading = true; this.catalogsError = ''; this.changeDetector.markForCheck();
+    try { await this.dataService.loadCatalogs(); }
+    catch { this.catalogsError = 'No se pudieron cargar los catálogos desde la API.'; }
+    finally { this.catalogsLoading = false; this.changeDetector.markForCheck(); }
   }
 
   ngAfterViewInit(): void {

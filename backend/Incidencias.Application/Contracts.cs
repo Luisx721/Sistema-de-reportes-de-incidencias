@@ -10,6 +10,7 @@ public sealed record IncidentDto(string Code, string Category, string Location, 
 }
 public sealed record HistoryDto(DateTimeOffset Date, string State, string Note);
 public sealed record CreateIncidentDto(string Category, string Location, string Description, string? Reference);
+public sealed record IncidentCatalogsDto(IReadOnlyList<string> Categories, IReadOnlyList<string> Locations);
 public sealed record ChangeIncidentDto(string State, string Priority, string Note, long Version);
 public sealed record LoginDto(string Username, string Password);
 public sealed record SessionDto(string Token, string Name, string Profile, string? Area, DateTimeOffset ExpiresAt);
@@ -56,6 +57,7 @@ public interface IIncidentStore
     Task<SessionDto?> GetSessionAsync(string token, CancellationToken ct);
     Task EndSessionAsync(string token, CancellationToken ct);
     Task<IncidentDto> CreateAsync(CreateIncidentDto request, CancellationToken ct);
+    Task<IncidentCatalogsDto> GetCatalogsAsync(CancellationToken ct);
     Task<PublicStatusDto?> TrackAsync(string code, CancellationToken ct);
     Task<IReadOnlyList<IncidentDto>> ListAsync(IncidentFilterDto filter, SessionDto session, CancellationToken ct);
     Task<IncidentDto?> GetAuthorizedAsync(string code, SessionDto session, CancellationToken ct);

@@ -24,8 +24,8 @@ export class HeaderComponent {
     this.menuOpen = false;
   }
 
-  logout(): void {
-    this.authService.endSession();
+  async logout(): Promise<void> {
+    await this.authService.endSession();
     this.closeMenu();
     this.router.navigate(['/']);
   }

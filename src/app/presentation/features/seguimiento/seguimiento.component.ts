@@ -26,6 +26,7 @@ export class SeguimientoComponent implements OnInit, OnDestroy {
   report: IncidentReport | null = null;
   loading = false;
   searched = false;
+  lookupError = '';
   photoUrls: string[] = [];
 
   ngOnInit(): void {
@@ -67,17 +68,25 @@ export class SeguimientoComponent implements OnInit, OnDestroy {
     try {
       this.loading = true;
       this.searched = true;
+      this.lookupError = '';
       this.revokePhotoUrls();
 
       try {
-        await this.dataService.seed();
+        if (this.dataService.demoMode) await this.dataService.seed();
         const r = await this.dataService.getReport(code);
         this.report = r || null;
         if (this.report && this.report.photos && this.report.photos.length > 0) {
           this.photoUrls = this.report.photos.map((p) => URL.createObjectURL(p));
         }
-      } catch (err) {
+      } catch (err: any) {
         this.report = null;
+        this.lookupError = err?.status === 401
+          ? 'La sesión no es válida (401). Inicia sesión nuevamente.'
+          : err?.status === 403
+            ? 'No tienes autorización para consultar este reporte (403).'
+            : err?.status === 0
+              ? 'No se pudo conectar con la API. Comprueba que esté disponible.'
+              : 'No se pudo completar la consulta.';
       } finally {
         this.loading = false;
       }

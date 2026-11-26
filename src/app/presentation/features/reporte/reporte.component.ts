@@ -1,5 +1,5 @@
 import { AuthService } from '../../../application/services/auth.service';
-import { ChangeDetectorRef, Component, OnDestroy, inject } from '@angular/core';
+import { ChangeDetectorRef, Component, OnDestroy, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
@@ -17,7 +17,7 @@ interface PhotoItem {
   imports: [CommonModule, FormsModule, RouterLink],
   templateUrl: './reporte.component.html',
 })
-export class ReporteComponent implements OnDestroy {
+export class ReporteComponent implements OnDestroy, OnInit {
   // Dependencias y estado de la vista
 
   private changeDetector = inject(ChangeDetectorRef);
@@ -38,9 +38,25 @@ export class ReporteComponent implements OnDestroy {
   photoError = '';
   formGeneralError = '';
   isSubmitting = false;
+  catalogsLoading = !this.dataService.demoMode;
+  catalogsError = '';
   isDragging = false;
 
   errors: { category?: string; location?: string; description?: string } = {};
+
+  async ngOnInit(): Promise<void> {
+    if (this.dataService.demoMode) return;
+    try { await this.dataService.loadCatalogs(); }
+    catch { this.catalogsError = 'No se pudieron cargar las categorías y ubicaciones de la API. Reintenta para volver a consultar.'; }
+    finally { this.catalogsLoading = false; this.changeDetector.markForCheck(); }
+  }
+
+  async retryCatalogs(): Promise<void> {
+    this.catalogsLoading = true; this.catalogsError = ''; this.changeDetector.markForCheck();
+    try { await this.dataService.loadCatalogs(); }
+    catch { this.catalogsError = 'No se pudieron cargar las categorías y ubicaciones de la API. Reintenta para volver a consultar.'; }
+    finally { this.catalogsLoading = false; this.changeDetector.markForCheck(); }
+  }
 
   ngOnDestroy(): void {
     this.clearPhotoUrls();
@@ -112,6 +128,9 @@ export class ReporteComponent implements OnDestroy {
     }
 
     this.photoError = errors.join(' ');
+    if (this.photos.length && !this.dataService.demoMode) {
+      this.photoError = [this.photoError, 'La API todavía no tiene carga de archivos; estas fotos solo se conservan como vista previa y no se enviarán al servidor.'].filter(Boolean).join(' ');
+    }
   }
 
   removePhoto(index: number): void {
@@ -137,6 +156,7 @@ export class ReporteComponent implements OnDestroy {
   async submitReport(): Promise<void> {
     try {
       if (this.isSubmitting) return;
+      if (!this.dataService.demoMode && (this.catalogsLoading || this.catalogsError || !this.dataService.categories.length || !this.dataService.locations.length)) return;
 
       this.errors = {
         category: !this.dataService.categories.includes(this.category)
@@ -168,14 +188,14 @@ export class ReporteComponent implements OnDestroy {
       try {
         const date = new Date().toISOString();
         const bytes = crypto.getRandomValues(new Uint8Array(6));
-        const code =
+        const localCode =
           'UES' +
           Array.from(bytes, (b) => b.toString(16).padStart(2, '0'))
             .join('')
             .toUpperCase();
 
         const record: IncidentReport = {
-          code,
+          code: localCode,
           created: date,
           state: this.dataService.states[0],
           category: this.category,
@@ -200,11 +220,17 @@ export class ReporteComponent implements OnDestroy {
               : undefined,
         };
 
-        await this.dataService.saveReport(record);
+        const code = await this.dataService.saveReport(record) as string;
         this.router.navigate(['/confirmacion'], { queryParams: { codigo: code } });
       } catch (err) {
-        this.formGeneralError =
-          'No se pudo guardar el reporte en este navegador. Tus datos siguen en el formulario; revisa el espacio disponible o los permisos de almacenamiento e intenta otra vez.';
+        const status = (err as any)?.status;
+        this.formGeneralError = status === 400
+          ? 'La API rechazó algunos datos del reporte (400). Revísalos e intenta de nuevo.'
+          : status === 409
+            ? 'El reporte entró en conflicto con un registro existente (409). Intenta de nuevo.'
+            : status === 0
+              ? 'No se pudo conectar con la API. Tus datos siguen en el formulario.'
+              : 'No se pudo guardar el reporte. Tus datos siguen en el formulario.';
       } finally {
         this.isSubmitting = false;
       }

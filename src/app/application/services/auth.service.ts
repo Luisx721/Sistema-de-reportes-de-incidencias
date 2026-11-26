@@ -2,15 +2,24 @@ import { computed, inject, Injectable, signal } from '@angular/core';
 import { SessionUser } from '../../domain/models/incident.model';
 import { AdminService } from './admin.service';
 import { readLocal, writeLocal } from '../../infrastructure/local-storage';
+import { API_CONFIG } from '../../infrastructure/api-config';
+import { ApiClient } from '../../infrastructure/api-client';
 
 @Injectable({ providedIn: 'root' })
 export class AuthService {
   // Dependencias y estado privado de la sesion de demostracion
   private admin = inject(AdminService);
-  private current = signal<SessionUser | null>(this.restore());
+  private api = inject(ApiClient);
+  private config = inject(API_CONFIG);
+  private current = signal<SessionUser | null>(this.config.demoMode ? this.restore() : null);
+  readonly ready: Promise<void>;
+  constructor() {
+    this.ready = !this.config.demoMode && sessionStorage.getItem('ues-api-token')
+      ? this.refreshSession() : Promise.resolve();
+  }
   readonly user = computed(() => {
     const session = this.current();
-    if (!session || session.profile === 'Reportante') return session;
+    if (!session || !session.demo || session.profile === 'Reportante') return session;
     const account = this.admin.accounts().find((a) => a.id === session.id && a.active);
     return account
       ? { ...session, name: account.name, profile: account.role, area: account.area }
@@ -25,6 +34,17 @@ export class AuthService {
   }
   // Validacion local para pruebas sin autenticacion de servidor
   async login(username: string, password: string): Promise<boolean> {
+    if (!this.config.demoMode) {
+      try {
+        const session = await this.api.login(username.trim(), password);
+        sessionStorage.setItem('ues-api-token', session.token);
+        this.current.set({ name: session.name, profile: session.profile, area: session.area ?? undefined, demo: false });
+        return true;
+      } catch (error: any) {
+        if (error?.status === 401) return false;
+        throw error;
+      }
+    }
     if (username.trim().toLowerCase() === 'reportante@demo.ues' && password === 'DemoUES2026!') {
       this.setSession({
         id: 1000,
@@ -65,6 +85,7 @@ export class AuthService {
     return true;
   }
   async register(name: string, email: string, password: string): Promise<void> {
+    if (!this.config.demoMode) throw new Error('La API todavía no ofrece registro de cuentas.');
     const accounts = readLocal<
       Array<{ id: number; name: string; email: string; password: string }>
     >('ues-community', []);
@@ -92,7 +113,23 @@ export class AuthService {
     sessionStorage.setItem('ues-demo-session', JSON.stringify(user));
     this.current.set(user);
   }
-  endSession(): void {
+  async refreshSession(): Promise<void> {
+    if (this.config.demoMode) return;
+    try {
+      const session = await this.api.currentSession();
+      this.current.set({ name: session.name, profile: session.profile, area: session.area ?? undefined, demo: false });
+    } catch {
+      sessionStorage.removeItem('ues-api-token');
+      this.current.set(null);
+    }
+  }
+  async endSession(): Promise<void> {
+    if (!this.config.demoMode && sessionStorage.getItem('ues-api-token')) {
+      try { await this.api.endSession(); } catch { /* Se limpia el token aunque ya haya expirado. */ }
+      sessionStorage.removeItem('ues-api-token');
+      this.current.set(null);
+      return;
+    }
     sessionStorage.removeItem('ues-demo-session');
     this.current.set(null);
   }

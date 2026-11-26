@@ -55,10 +55,9 @@
       <p class="empty-state" role="status">Consultando reporte…</p>
     } @else if (searched && !report) {
       <div class="empty-state">
-        <h2>No encontramos ese código</h2>
+        <h2>{{ lookupError ? 'No se pudo consultar' : 'No encontramos ese código' }}</h2>
         <p>
-          Revisa que esté completo. En esta demostración solo puedes consultar los ejemplos y los
-          reportes guardados en este navegador.
+          {{ lookupError || 'Revisa que esté completo o intenta con otro código.' }}
         </p>
       </div>
     } @else if (report) {

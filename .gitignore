@@ -68,3 +68,5 @@ App_Data/
 
 # Carpeta temporal
 /carpeta-temporal/
+ProyectoBD/backups/
+backend/Incidencias.Api/uploads/fotos_restauradas/

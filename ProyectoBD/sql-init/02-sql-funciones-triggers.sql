@@ -2,10 +2,13 @@
 -- FN_Generar_Codigo_Seguimiento: INC + año + número (ej. INC2026001)
 CREATE SEQUENCE seq_codigo_seguimiento START 1;
 
-CREATE FUNCTION fn_generar_codigo_seguimiento() RETURNS VARCHAR AS $$
+CREATE OR REPLACE FUNCTION fn_generar_codigo_seguimiento() RETURNS VARCHAR AS $$
+DECLARE
+    v_seq BIGINT;
 BEGIN
+    v_seq := NEXTVAL('seq_codigo_seguimiento');
     RETURN 'INC' || TO_CHAR(CURRENT_DATE, 'YYYY')
-           || LPAD(NEXTVAL('seq_codigo_seguimiento')::TEXT, 3, '0');
+           || LPAD(v_seq::TEXT, GREATEST(3, LENGTH(v_seq::TEXT)), '0');
 END;
 $$ LANGUAGE plpgsql;
 

@@ -3,21 +3,22 @@ import { Injectable, inject, signal } from '@angular/core';
 import { Account, CatalogItem } from '../../domain/models/incident.model';
 import { API_CONFIG } from '../../infrastructure/api-config';
 import { ApiClient } from '../../infrastructure/api-client';
-
+// Elemento de catalogo con su area (categorias) o edificio (ubicaciones)
 export interface AdminCatalogItem extends CatalogItem {
   areaId?: number;
   areaName?: string;
   buildingId?: number;
   buildingName?: string;
 }
-
+// Servicio de administracion: cuentas, categorias y ubicaciones.
+// En modo demo guarda en el navegador; en modo real usa la API.
 @Injectable({
   providedIn: 'root',
 })
 export class AdminService {
   private config = inject(API_CONFIG);
   private api = inject(ApiClient);
-
+ // Datos iniciales del modo demo
   private readonly initialAccounts: Account[] = [
     { 
       id: 1, 
@@ -64,13 +65,13 @@ export class AdminService {
       buildingId: 1, 
       buildingName: 'Aulas' },
   ];
-
+// Estado actual de cada lista (signals)
   private accountsSignal = signal<Account[]>(readLocal('ues-accounts', this.initialAccounts));
   private categoriesSignal = signal<AdminCatalogItem[]>(readLocal('ues-categories', this.initialCategories));
   private locationsSignal = signal<AdminCatalogItem[]>(readLocal('ues-locations', this.initialLocations));
   private areasSignal = signal<{ id: number; name: string; active: boolean }[]>([]);
   private buildingsSignal = signal<{ id: number; name: string; active: boolean }[]>([]);
-
+// Versiones de solo lectura para las pantallas
   readonly accounts = this.accountsSignal.asReadonly();
   readonly categories = this.categoriesSignal.asReadonly();
   readonly locations = this.locationsSignal.asReadonly();
@@ -80,7 +81,7 @@ export class AdminService {
   get demoMode(): boolean {
     return this.config.demoMode;
   }
-
+ // Carga todo desde la API pero en demo no hace nada
   async loadAll(): Promise<void> {
     if (this.config.demoMode) return;
     const [accounts, categories, locations, areas, buildings] = await Promise.all([
@@ -96,7 +97,7 @@ export class AdminService {
     this.areasSignal.set(areas);
     this.buildingsSignal.set(buildings);
   }
-
+ // Crea o edita una cuenta
   async saveAccount(data: {
     id?: number;
     name: string;
@@ -108,7 +109,7 @@ export class AdminService {
     if (!data.name.trim() || !data.username.trim() || !data.area.trim()) {
       throw new Error('Completa los datos de la cuenta');
     }
-
+ // Modo API: edita si hay id, crea si no (la cuenta nueva exige contraseña)
     if (!this.config.demoMode) {
       if (data.id) {
         const existing = this.accountsSignal().find((a) => a.id === data.id);
@@ -136,7 +137,7 @@ export class AdminService {
       this.accountsSignal.set(await this.api.getAdminAccounts());
       return;
     }
-
+ // Modo demo: no permite usuarios repetidos y guarda en el navegador
     if (
       this.accountsSignal().some(
         (a) => a.id !== data.id && a.username.toLowerCase() === data.username.trim().toLowerCase(),
@@ -155,7 +156,7 @@ export class AdminService {
     writeLocal('ues-accounts', list);
     this.accountsSignal.set(list);
   }
-
+ // Desactiva o reactiva una cuenta
   async setAccountActive(id: number, active: boolean): Promise<void> {
     if (!this.config.demoMode) {
       await this.api.setAdminAccountActive(id, active);
@@ -166,13 +167,13 @@ export class AdminService {
     writeLocal('ues-accounts', list);
     this.accountsSignal.set(list);
   }
-
+ // Crea o edita una categoria o una ubicacion
   async saveCatalogItem(
     type: 'categories' | 'locations',
     data: { id?: number; name: string; areaId?: number; buildingId?: number }
   ): Promise<void> {
     if (!data.name.trim()) throw new Error('Nombre vacío.');
-
+ // Modo API
     if (!this.config.demoMode) {
       if (type === 'categories') {
         const areaId = data.areaId || this.areasSignal()[0]?.id || 1;
@@ -195,7 +196,7 @@ export class AdminService {
       }
       return;
     }
-
+ // Modo demo: no permite nombres repetidos y guarda en el navegador
     const targetSignal = type === 'categories' ? this.categoriesSignal : this.locationsSignal;
     if (
       targetSignal().some(
@@ -215,7 +216,7 @@ export class AdminService {
     writeLocal('ues-' + type, list);
     targetSignal.set(list);
   }
-
+ // Desactiva o reactiva una categoria o ubicacion
   async setCatalogItemActive(type: 'categories' | 'locations', id: number, active: boolean): Promise<void> {
     if (!this.config.demoMode) {
       if (type === 'categories') {
@@ -232,7 +233,7 @@ export class AdminService {
     writeLocal('ues-' + type, list);
     targetSignal.set(list);
   }
-
+// Vuelve a los datos iniciales del modo demo
   restoreDefaults(): void {
     for (const [key, value] of Object.entries({
       accounts: this.initialAccounts,

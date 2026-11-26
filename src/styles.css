@@ -1,4 +1,12 @@
-﻿/* Colores y medidas generales */
+﻿/*
+ * Aqui hemos globalizado todos los diseños del sistema 
+ *
+ * Contiene los colores y medidas generales, los componentes comunes
+ * (botones, tarjetas, formularios, etiquetas), las pantallas del portal,
+ * las pantallas de acceso, el panel de administración y los ajustes
+ * para pantallas pequeñas e impresión.
+ */
+ /* Colores y medidas generales */
 :root {
   --red: #b20813;
   --red-dark: #80000a;

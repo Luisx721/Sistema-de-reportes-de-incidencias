@@ -65,3 +65,6 @@ App_Data/
 .env
 .env.*
 !.env.example
+
+# Carpeta temporal
+/carpeta-temporal/

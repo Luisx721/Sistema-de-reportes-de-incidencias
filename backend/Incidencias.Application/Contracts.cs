@@ -53,7 +53,7 @@ public sealed record SessionDto(
     string? Area,
     DateTimeOffset ExpiresAt,
     int? UserId = null);
-
+// DTO para consultar públicamente el estado de una incidencia.
 public sealed record PublicStatusDto(
     string Code,
     string Category,
@@ -63,6 +63,16 @@ public sealed record PublicStatusDto(
     IReadOnlyList<HistoryDto> History,
     string? Urgency = null,
     DateTimeOffset? Closed = null);
+
+// DTO para la respuesta pública del registro de incidencias.
+// Devuelve el código, estado y mensaje de confirmación,
+// sin exponer información personal ni notas internas.
+public sealed record CreateIncidentResultDto(
+    string Code,
+    bool IsDuplicate,
+    string Message,
+    string State,
+    DateTimeOffset Created);
 
 public sealed record IncidentFilterDto(
     string? Query,
@@ -96,24 +106,43 @@ public static class IncidentFilterRules
 
     public static DateTimeOffset StartOfNextDay(DateOnly date) => StartOfDay(date.AddDays(1));
 }
-
+// Excepción personalizada para representar conflictos en las operaciones.
+// Recibe un mensaje que explica el motivo del conflicto.
 public sealed class IncidentConflictException(string message) : Exception(message);
 
-/// <summary>Mapea el expediente interno al resumen público y sustituye observaciones libres por textos seguros.</summary>
+// Clase encargada de convertir los datos internos de una incidencia
+// en respuestas públicas, evitando exponer información privada.
 public static class IncidentContractMapper
 {
+    // Convierte el expediente interno en un resumen público.
     public static PublicStatusDto ToPublicStatus(IncidentDto incident) => new(
         incident.Code,
         incident.Category,
         incident.Location,
         incident.State,
         incident.Created,
+
+        // Recorre el historial y genera mensajes seguros,
+        // sin mostrar las observaciones originales.
         incident.History.Select(item => new HistoryDto(
             item.Date,
             item.State,
             item.State == "Recibido" ? "Reporte recibido." : $"Estado actualizado a {item.State}.")).ToArray(),
         incident.Urgency,
         incident.Closed);
+
+    // Genera la respuesta pública después de registrar una incidencia.
+    public static CreateIncidentResultDto ToCreateResult(IncidentDto incident) => new(
+        incident.Code,
+        incident.IsDuplicate,
+
+        // Si es duplicada, informa que existe un reporte similar.
+        // Si no es duplicada, confirma que fue recibida.
+        incident.IsDuplicate
+            ? "Ya existe un reporte abierto con la misma categoría y ubicación. Puede consultarlo con este código."
+            : "Reporte recibido.",
+        incident.State,
+        incident.Created); 
 }
 
 /// <summary>Adaptador reemplazable para concentrar todas las operaciones SQL.</summary>

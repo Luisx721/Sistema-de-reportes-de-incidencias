@@ -93,28 +93,38 @@ app.MapGet("/api/catalogos", async (IIncidentStore store, CancellationToken ct) 
 app.MapGet("/api/seguimiento/{code}", async (string code, IIncidentStore store, CancellationToken ct) =>
     await store.TrackAsync(code, ct) is { } status ? Results.Ok(status) : Results.NotFound(new { error = "Incidencia no encontrada." }));
 
-// ==========================================
-// Incidencias (Creación, Listado, Detalle, Modificación)
-// ==========================================
+// Incidencias: creación, listado, detalle y modificación
+
+// Registra una nueva incidencia y devuelve una respuesta pública con su código de seguimiento.
 
 app.MapPost("/api/incidencias", async (CreateIncidentDto request, HttpRequest req, IIncidentStore store, CancellationToken ct) =>
 {
     try
     {
+        // Obtiene la sesión del usuario que está realizando el reporte.
         var session = await Current(req, store, ct);
+
+        // Guarda la incidencia y obtiene los datos del reporte creado.
         var created = await store.CreateAsync(request, session, ct);
-        return Results.Created($"/api/seguimiento/{created.Code}", created);
+
+        // --Devuelve el código de seguimiento y una respuesta sin datos internos.
+        return Results.Created($"/api/seguimiento/{created.Code}", IncidentContractMapper.ToCreateResult(created));
     }
     catch (ArgumentException ex) { return Results.BadRequest(new { error = ex.Message }); }
     catch (UnauthorizedAccessException) { return Results.StatusCode(StatusCodes.Status403Forbidden); }
 });
 
+// Obtiene el listado de incidencias para los usuarios internos.
 app.MapGet("/api/incidencias", async (HttpRequest request, IIncidentStore store, CancellationToken ct) =>
 {
+    // Comprueba que el usuario tenga una sesión activa.
     var session = await Current(request, store, ct);
     if (session is null) return Results.Unauthorized();
+
+    // Verifica que el usuario tenga un perfil autorizado para consultar las incidencias.
     if (!IncidentRules.IsInternalProfile(session.Profile)) return Results.StatusCode(StatusCodes.Status403Forbidden);
 
+    // Prepara los filtros de fecha que se pueden enviar desde la consulta.
     DateOnly? from = null, to = null;
     if (request.Query.TryGetValue("from", out var fromText) && !string.IsNullOrWhiteSpace(fromText))
     {
@@ -127,6 +137,7 @@ app.MapGet("/api/incidencias", async (HttpRequest request, IIncidentStore store,
         to = parsedTo;
     }
 
+    // Organiza los filtros recibidos para buscar las incidencias.
     var filter = new IncidentFilterDto(
         request.Query["query"],
         request.Query["category"],
@@ -136,9 +147,11 @@ app.MapGet("/api/incidencias", async (HttpRequest request, IIncidentStore store,
         to,
         request.Query["urgency"]);
 
+    // Comprueba que los filtros tengan valores válidos.
     try { IncidentFilterRules.Validate(filter); }
     catch (ArgumentException ex) { return Results.BadRequest(new { error = ex.Message }); }
 
+    // Devuelve las incidencias que coinciden con los filtros.
     return Results.Ok(await store.ListAsync(filter, session, ct));
 });
 

@@ -233,10 +233,8 @@
         <p class="empty-state" role="status">Cargando incidencias…</p>
       } @else if (error) {
         <div class="empty-state" role="alert">
-          <h2>No pudimos cargar la información</h2>
-          <p>
-            No se pudo acceder a los reportes locales. Comprueba los permisos de almacenamiento.
-          </p>
+          <h2>No hay listado público disponible</h2>
+          <p>{{ errorMessage }}</p>
         </div>
       } @else if (recentReports.length === 0) {
         <div class="empty-state">

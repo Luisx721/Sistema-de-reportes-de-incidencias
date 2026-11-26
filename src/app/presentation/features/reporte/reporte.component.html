@@ -22,6 +22,8 @@
           {{ formGeneralError }}
         </div>
       }
+      @if (catalogsLoading) { <p role="status">Cargando categorías y ubicaciones…</p> }
+      @if (catalogsError) { <div class="form-status" role="alert">{{ catalogsError }} <button type="button" (click)="retryCatalogs()">Reintentar</button></div> }
 
       <!-- 01 Ubicación y categoría -->
       <fieldset>
@@ -41,6 +43,7 @@
               [attr.aria-invalid]="!!errors.category"
               aria-describedby="category-error"
               required
+              [disabled]="catalogsLoading || !!catalogsError"
             >
               <option value="">Selecciona una categoría</option>
               @for (cat of dataService.categories; track cat) {
@@ -62,6 +65,7 @@
               [attr.aria-invalid]="!!errors.location"
               aria-describedby="location-error"
               required
+              [disabled]="catalogsLoading || !!catalogsError"
             >
               <option value="">Selecciona una ubicación</option>
               @for (loc of dataService.locations; track loc.id) {
@@ -250,7 +254,8 @@
         </button>
       </div>
       <p class="local-note">
-        Demostración: el reporte se guarda en este navegador. No se envía a la universidad.
+        @if (dataService.demoMode) { Demostración: el reporte se guarda en este navegador. No se envía a la universidad. }
+        @else { El reporte se enviará a la API institucional. La persistencia de fotografías en servidor sigue pendiente; las fotos no se cargarán. }
       </p>
     </form>
 

@@ -32,6 +32,8 @@ export class WorkspaceComponent implements OnInit, OnDestroy {
   selected: IncidentReport | null = null;
   photos: string[] = [];
   loading = false;
+  catalogsLoading = false;
+  catalogsError = '';
   busy = false;
   message = '';
   query = '';
@@ -45,6 +47,8 @@ export class WorkspaceComponent implements OnInit, OnDestroy {
   note = '';
   tab = 'bandeja';
   private timer?: ReturnType<typeof setInterval>;
+  private filterTimer?: ReturnType<typeof setTimeout>;
+  private requestId = 0;
   get title(): string {
     return ['Jefatura', 'Ordenanza'].includes(this.auth.user()?.profile || '')
       ? 'Reportes de mi área'
@@ -63,13 +67,15 @@ export class WorkspaceComponent implements OnInit, OnDestroy {
   }
   get filtered(): IncidentReport[] {
     if (this.dateError) return [];
-    return visibleReports(this.auth.user(), this.reports)
+    const source = this.data.demoMode ? visibleReports(this.auth.user(), this.reports) : this.reports;
+    const locationValue = this.location && !this.data.demoMode ? this.data.locationName(this.location) : this.location;
+    return source
       .filter(
         (r) =>
           (!this.query ||
             `${r.code} ${r.description}`.toLowerCase().includes(this.query.toLowerCase())) &&
           (!this.category || r.category === this.category) &&
-          (!this.location || r.location === this.location) &&
+          (!this.location || r.location === locationValue) &&
           (!this.state || r.state === this.state) &&
           (!this.from || r.created.slice(0, 10) >= this.from) &&
           (!this.to || r.created.slice(0, 10) <= this.to),
@@ -82,21 +88,27 @@ export class WorkspaceComponent implements OnInit, OnDestroy {
       );
   }
   get categories(): string[] {
+    if (!this.data.demoMode) return this.data.categories;
     return [...new Set([...this.data.categories, ...this.reports.map((r) => r.category)])];
   }
   get locationIds(): string[] {
+    if (!this.data.demoMode) return this.data.locations.map((l) => l.id);
     return [
       ...new Set([...this.data.locations.map((l) => l.id), ...this.reports.map((r) => r.location)]),
     ];
   }
   get editable(): boolean {
-    return !!this.selected && canEditReport(this.auth.user(), this.selected);
+    if (!this.selected) return false;
+    if (!this.data.demoMode) return !['Resuelto', 'Rechazado/Cerrado'].includes(this.selected.state) &&
+      ['Jefatura', 'Ordenanza', 'Mantenimiento', 'Desarrollo Físico'].includes(this.auth.user()?.profile || '');
+    return canEditReport(this.auth.user(), this.selected);
   }
   get transitions(): string[] {
     return this.selected ? allowedTransitions(this.selected.state) : [];
   }
   count(state: string): number {
-    return visibleReports(this.auth.user(), this.reports).filter((r) => r.state === state).length;
+    const source = this.data.demoMode ? visibleReports(this.auth.user(), this.reports) : this.reports;
+    return source.filter((r) => r.state === state).length;
   }
   total(state: string): number {
     return this.filtered.filter((r) => r.state === state).length;
@@ -117,6 +129,12 @@ export class WorkspaceComponent implements OnInit, OnDestroy {
   // Carga y actualizacion periodica del mismo almacen local
   async ngOnInit(): Promise<void> {
     try {
+      if (!this.data.demoMode) {
+        this.catalogsLoading = true;
+        try { await this.data.loadCatalogs(); }
+        catch { this.catalogsError = 'No se pudieron cargar los catálogos para los filtros.'; }
+        finally { this.catalogsLoading = false; }
+      }
       await this.reload();
       this.timer = setInterval(() => void this.reload(false), 30000);
     } finally {
@@ -128,15 +146,29 @@ export class WorkspaceComponent implements OnInit, OnDestroy {
     this.releasePhotos();
   }
   async reload(showLoading = true): Promise<void> {
+    const requestId = ++this.requestId;
     try {
       if (showLoading) this.loading = true;
       try {
-        await this.data.seed();
-        this.reports = await this.data.getReports();
-      } catch {
-        this.message = 'No se pudo cargar el almacenamiento local. Reintenta actualizar.';
+        if (this.data.demoMode) await this.data.seed();
+        const reports = await this.data.getReports({
+          query: this.query.trim() || undefined,
+          category: this.category || undefined,
+          location: this.location ? this.data.locationName(this.location) : undefined,
+          state: this.state || undefined,
+          from: this.from || undefined,
+          to: this.to || undefined,
+        });
+        if (requestId === this.requestId) { this.reports = reports; this.message = ''; }
+      } catch (error: any) {
+        if (requestId === this.requestId) this.message = error?.status === 401
+          ? 'La sesión expiró (401). Inicia sesión nuevamente.'
+          : error?.status === 403
+            ? 'Tu perfil no tiene autorización para ver esta bandeja (403).'
+            : this.data.demoMode ? 'No se pudo cargar el almacenamiento local. Reintenta actualizar.'
+              : 'No se pudo cargar la bandeja desde la API.';
       } finally {
-        this.loading = false;
+        if (requestId === this.requestId) this.loading = false;
       }
     } finally {
       this.changeDetector.markForCheck();
@@ -144,15 +176,31 @@ export class WorkspaceComponent implements OnInit, OnDestroy {
   }
   clear(): void {
     this.query = this.category = this.location = this.state = this.from = this.to = '';
+    void this.reload();
   }
-  open(report: IncidentReport): void {
+  filtersChanged(): void {
+    if (this.dateError) return;
+    clearTimeout(this.filterTimer);
+    this.filterTimer = setTimeout(() => void this.reload(), 250);
+  }
+  async open(report: IncidentReport): Promise<void> {
     this.releasePhotos();
-    this.selected = report;
-    this.nextState = report.state;
-    this.priority = report.priority || 'Media';
-    this.note = '';
     this.message = '';
-    this.photos = report.photos.map((p) => URL.createObjectURL(p));
+    try {
+      const detail = this.data.demoMode ? report : await this.data.getAuthorizedReport(report.code);
+      this.selected = detail;
+      this.nextState = detail.state;
+      this.priority = detail.priority || 'Media';
+      this.note = '';
+      this.photos = detail.photos.map((p) => URL.createObjectURL(p));
+    } catch (error: any) {
+      this.selected = null;
+      this.message = error?.status === 401
+        ? 'La sesión expiró (401). Inicia sesión nuevamente.'
+        : error?.status === 403
+          ? 'No tienes autorización para abrir este expediente (403).'
+          : 'No se pudo cargar el expediente actualizado.';
+    }
     this.changeDetector.markForCheck();
   }
   close(): void {
@@ -184,14 +232,35 @@ export class WorkspaceComponent implements OnInit, OnDestroy {
       }
       this.busy = true;
       try {
-        await this.data.updateReport(this.selected.code, this.nextState, this.note, this.priority);
+        const selected = this.selected;
+        const updated = await this.data.updateReport(selected.code, this.nextState, this.note, this.priority, selected.version);
         await this.reload();
-        const updated = this.reports.find((r) => r.code === this.selected?.code);
-        if (updated) this.open(updated);
-        this.message =
-          'Cambio guardado con historial. El seguimiento público mostrará la actualización.';
-      } catch (error) {
-        this.message = error instanceof Error ? error.message : 'No se pudo guardar';
+        if (updated) {
+          this.selected = updated;
+          this.nextState = updated.state;
+          this.priority = updated.priority || 'Media';
+          this.note = '';
+        } else {
+          const current = this.reports.find((r) => r.code === selected.code);
+          if (current) await this.open(current);
+        }
+        this.message = 'Cambio guardado con historial. El seguimiento público mostrará la actualización.';
+      } catch (error: any) {
+        if (error?.status === 409 && this.selected) {
+          const code = this.selected.code;
+          try {
+            const fresh = await this.data.getAuthorizedReport(code);
+            this.selected = fresh;
+            this.nextState = fresh.state;
+            this.priority = fresh.priority || 'Media';
+            this.note = '';
+          } catch {
+            await this.reload();
+          }
+          this.message = 'Otro usuario modificó este expediente. Se recargó la versión actual; revisa el historial y vuelve a aplicar el cambio manualmente si corresponde.';
+        } else if (error?.status === 401) this.message = 'La sesión expiró (401). Inicia sesión nuevamente.';
+        else if (error?.status === 403) this.message = 'El servidor rechazó la autorización para modificar este expediente (403).';
+        else this.message = error?.error?.error || error?.message || 'No se pudo guardar';
       } finally {
         this.busy = false;
       }

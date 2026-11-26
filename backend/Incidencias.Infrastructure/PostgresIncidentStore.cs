@@ -31,6 +31,17 @@ public sealed class PostgresIncidentStore(string connectionString) : IIncidentSt
     public async Task<SessionDto?> GetSessionAsync(string token,CancellationToken ct)
     { await using var db=await Open(ct);await using var cmd=new NpgsqlCommand("UPDATE rol2_sessions s SET last_seen_at=now() FROM usuarios u JOIN rol r USING(id_rol) LEFT JOIN areas a USING(id_area) WHERE s.id_usuario=u.id_usuario AND s.token_hash=@hash AND s.last_seen_at>now()-interval '30 minutes' AND u.u_activo AND r.r_activo RETURNING u.u_nombre,r.r_nombre,a.a_nombre,s.last_seen_at+interval '30 minutes'",db);cmd.Parameters.AddWithValue("hash",Digest(token));await using var rd=await cmd.ExecuteReaderAsync(ct);return await rd.ReadAsync(ct)?new(token,rd.GetString(0),MapRole(rd.GetString(1)),rd.IsDBNull(2)?null:rd.GetString(2),rd.GetFieldValue<DateTimeOffset>(3)):null; }
     public async Task EndSessionAsync(string token,CancellationToken ct){await using var db=await Open(ct);await using var c=new NpgsqlCommand("DELETE FROM rol2_sessions WHERE token_hash=@h",db);c.Parameters.AddWithValue("h",Digest(token));await c.ExecuteNonQueryAsync(ct);}
+    public async Task<IncidentCatalogsDto> GetCatalogsAsync(CancellationToken ct)
+    {
+        await using var db=await Open(ct);
+        var categories=new List<string>();
+        await using(var cmd=new NpgsqlCommand("SELECT c.c_nombre FROM categorias c WHERE c.c_activo ORDER BY c.c_nombre",db))
+        await using(var rd=await cmd.ExecuteReaderAsync(ct)) while(await rd.ReadAsync(ct)) categories.Add(rd.GetString(0));
+        var locations=new List<string>();
+        await using(var cmd=new NpgsqlCommand("SELECT e.e_nombre || ' - ' || u.ub_nombre FROM ubicaciones u JOIN edificios e USING(id_edificio) WHERE u.ub_activo AND e.e_activo ORDER BY e.e_nombre,u.ub_nombre",db))
+        await using(var rd=await cmd.ExecuteReaderAsync(ct)) while(await rd.ReadAsync(ct)) locations.Add(rd.GetString(0));
+        return new(categories,locations);
+    }
     public async Task<IncidentDto> CreateAsync(CreateIncidentDto q,CancellationToken ct)
     {
         if(string.IsNullOrWhiteSpace(q.Category)||string.IsNullOrWhiteSpace(q.Location)||q.Description.Trim().Length is <20 or >2000)throw new ArgumentException("Categoría, ubicación y descripción válida son obligatorias.");

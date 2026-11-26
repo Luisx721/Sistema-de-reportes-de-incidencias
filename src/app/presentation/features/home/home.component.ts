@@ -20,10 +20,16 @@ export class HomeComponent implements OnInit {
   recentReports: IncidentReport[] = [];
   loading = true;
   error = false;
+  errorMessage = 'No pudimos cargar la información.';
 
   async ngOnInit(): Promise<void> {
     try {
       try {
+        if (!this.dataService.demoMode) {
+          this.error = true;
+          this.errorMessage = 'La API Rol 2 todavía no ofrece un listado público de incidencias.';
+          return;
+        }
         await this.dataService.seed();
         const all = await this.dataService.getReports();
         all.sort((a, b) => b.created.localeCompare(a.created));

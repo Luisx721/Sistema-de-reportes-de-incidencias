@@ -153,8 +153,8 @@
           }
         </div>
 
-        <button class="button" type="submit">
-          Iniciar sesión
+        <button class="button" type="submit" [disabled]="isSubmitting">
+          {{ isSubmitting ? 'Iniciando sesión…' : 'Iniciar sesión' }}
           <svg
             class="icon"
             viewBox="0 0 24 24"

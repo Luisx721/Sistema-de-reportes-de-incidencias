@@ -22,10 +22,13 @@ export class LoginComponent {
   password = '';
   showPassword = false;
   authStatus = '';
+  isSubmitting = false;
 
   errors: { email?: string; password?: string } = {};
 
   async submitLogin(): Promise<void> {
+    if (this.isSubmitting) return;
+    this.isSubmitting = true;
     try {
       this.authStatus = '';
       this.errors = {
@@ -47,11 +50,17 @@ export class LoginComponent {
         this.router.navigate([
           this.authService.user()?.profile === 'Administrador' ? '/admin' : '/panel',
         ]);
-      } catch {
-        this.authStatus =
-          'No se pudo abrir la sesión de demostración. Puedes continuar como invitado.';
+      } catch (error: any) {
+        this.authStatus = error?.status === 403
+          ? 'Tu cuenta no tiene autorización para iniciar sesión (403).'
+          : error?.status === 401
+            ? 'Usuario o contraseña incorrectos (401).'
+            : error?.status === 0
+              ? 'No se pudo conectar con la API de sesiones.'
+              : 'No se pudo abrir la sesión.';
       }
     } finally {
+      this.isSubmitting = false;
       this.changeDetector.markForCheck();
     }
   }

@@ -41,6 +41,7 @@ app.MapPost("/api/incidencias", async (CreateIncidentDto request, IIncidentStore
     }
     catch (ArgumentException ex) { return Results.BadRequest(new { error = ex.Message }); }
 });
+app.MapGet("/api/catalogos", async (IIncidentStore store, CancellationToken ct) => Results.Ok(await store.GetCatalogsAsync(ct)));
 app.MapGet("/api/seguimiento/{code}", async (string code, IIncidentStore store, CancellationToken ct) =>
     await store.TrackAsync(code, ct) is { } status ? Results.Ok(status) : Results.NotFound());
 app.MapGet("/api/incidencias", async (HttpRequest request, IIncidentStore store, CancellationToken ct) =>

@@ -10,15 +10,16 @@
     </button>
   </header>
   <p class="notice">
-    Entorno de demostración. Consulta los expedientes y utiliza las acciones disponibles para tu
-    perfil. Los cambios se conservan en este navegador.
+    @if (data.demoMode) { Entorno de demostración. Los cambios se conservan en este navegador. }
+    @else { Conectado a la API institucional. El servidor valida tu sesión y autorización para cada operación. }
+    La persistencia de fotografías en servidor sigue pendiente; los adjuntos no se guardan desde este panel.
   </p>
   @if (canReport) {
     <a class="button" routerLink="/reporte">Registrar incidencia</a>
   }
   <section class="metrics" aria-label="Resumen por estado">
     @for (item of data.states; track item) {
-      <button class="metric" (click)="state = item; tab = 'bandeja'">
+      <button class="metric" (click)="state = item; tab = 'bandeja'; filtersChanged()">
         <strong>{{ count(item) }}</strong><span>{{ item }}</span>
       </button>
     }
@@ -33,10 +34,12 @@
       </button>
     }
   </nav>
+  @if (catalogsLoading) { <p role="status">Cargando categorías y ubicaciones…</p> }
+  @if (catalogsError) { <p role="alert">{{ catalogsError }}</p> }
   <section class="filter-grid" aria-label="Filtros">
-    <label>Buscar código o descripción<input [(ngModel)]="query" /></label>
+    <label>Buscar código o descripción<input [(ngModel)]="query" (ngModelChange)="filtersChanged()" /></label>
     <label
-      >Categoría<select [(ngModel)]="category">
+      >Categoría<select [(ngModel)]="category" (ngModelChange)="filtersChanged()">
         <option value="">Todas</option>
         @for (item of categories; track item) {
           <option>{{ item }}</option>
@@ -44,7 +47,7 @@
       </select></label
     >
     <label
-      >Ubicación<select [(ngModel)]="location">
+      >Ubicación<select [(ngModel)]="location" (ngModelChange)="filtersChanged()">
         <option value="">Todas</option>
         @for (id of locationIds; track id) {
           <option [value]="id">{{ data.locationName(id) }}</option>
@@ -52,21 +55,21 @@
       </select></label
     >
     <label
-      >Estado<select [(ngModel)]="state">
+      >Estado<select [(ngModel)]="state" (ngModelChange)="filtersChanged()">
         <option value="">Todos</option>
         @for (item of data.states; track item) {
           <option>{{ item }}</option>
         }
       </select></label
     >
-    <label>Desde<input type="date" [(ngModel)]="from" /></label
-    ><label>Hasta<input type="date" [(ngModel)]="to" /></label>
+    <label>Desde<input type="date" [(ngModel)]="from" (ngModelChange)="filtersChanged()" /></label
+    ><label>Hasta<input type="date" [(ngModel)]="to" (ngModelChange)="filtersChanged()" /></label>
     <button class="button button-outline" (click)="clear()">Limpiar filtros</button>
   </section>
   @if (dateError) {
     <p role="alert">La fecha inicial no puede ser posterior a la final.</p>
   }
-  @if (message) {
+  @if (message && !selected) {
     <p role="status" class="notice">{{ message }}</p>
   }
   @if (loading) {

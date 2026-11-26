@@ -4,14 +4,24 @@ import { AuthService } from './auth.service';
 import { allowedTransitions, canEditReport } from '../../domain/policies/permissions';
 import { Injectable, inject } from '@angular/core';
 import { CampusLocation, IncidentReport } from '../../domain/models/incident.model';
+import { API_CONFIG } from '../../infrastructure/api-config';
+import { ApiClient } from '../../infrastructure/api-client';
+import { fromIncidentDto, fromPublicStatus, toChangeIncident, toCreateIncident } from '../../infrastructure/api-mappers';
+import { IncidentCatalogsDto } from '../../infrastructure/api-mappers';
+
+export interface IncidentFilters { query?: string; category?: string; location?: string; state?: string; from?: string; to?: string; }
 
 @Injectable({
   providedIn: 'root',
 })
 export class DataService {
+  private apiCatalogs: IncidentCatalogsDto | null = null;
   private repository = inject(IncidentRepository);
   private admin = inject(AdminService);
   private auth = inject(AuthService);
+  private api = inject(ApiClient);
+  private config = inject(API_CONFIG);
+  get demoMode(): boolean { return this.config.demoMode; }
   private readonly originalCategories: string[] = [
     'Mobiliario',
     'Electricidad',
@@ -30,12 +40,14 @@ export class DataService {
 
   // Catalogos activos compartidos con administracion
   get categories(): string[] {
+    if (!this.config.demoMode) return this.apiCatalogs?.categories ?? [];
     return this.admin
       .categories()
       .filter((c) => c.active)
       .map((c) => c.name);
   }
   get locations(): CampusLocation[] {
+    if (!this.config.demoMode) return (this.apiCatalogs?.locations ?? []).map(name => ({ id: name, name, x: 50, y: 50, lat: 0, lng: 0 }));
     return this.admin
       .locations()
       .filter((l) => l.active)
@@ -57,6 +69,12 @@ export class DataService {
     'Resuelto',
     'Rechazado/Cerrado',
   ];
+
+  async loadCatalogs(): Promise<void> {
+    if (this.config.demoMode) return;
+    const catalogs = await this.api.getCatalogs();
+    this.apiCatalogs = { categories: [...catalogs.categories], locations: [...catalogs.locations] };
+  }
 
   private readonly samples: [string, string, string, string, number][] = [
     [
@@ -97,11 +115,25 @@ export class DataService {
   ];
 
   async getReport(code: string): Promise<IncidentReport | undefined> {
+    if (!this.config.demoMode) {
+      try { return fromPublicStatus(await this.api.track(code)); }
+      catch (error: any) { if (error?.status === 404) return undefined; throw error; }
+    }
     return this.repository.transaction<IncidentReport | undefined>('readonly', (s) => s.get(code));
   }
 
-  async getReports(): Promise<IncidentReport[]> {
+  async getReports(filters: IncidentFilters = {}): Promise<IncidentReport[]> {
+    if (!this.config.demoMode) return (await this.api.listIncidents(filters)).map(fromIncidentDto);
     return this.repository.transaction<IncidentReport[]>('readonly', (s) => s.getAll());
+  }
+
+  async getAuthorizedReport(code: string): Promise<IncidentReport> {
+    if (this.config.demoMode) {
+      const report = await this.getReport(code);
+      if (!report) throw new Error('No se encontró el expediente.');
+      return report;
+    }
+    return fromIncidentDto(await this.api.getIncident(code));
   }
 
   async saveReport(report: IncidentReport): Promise<IDBValidKey> {
@@ -119,11 +151,22 @@ export class DataService {
     )
       throw new Error('Selecciona un catalogo activo');
 
+    if (!this.config.demoMode) {
+      const localLocation = this.locations.find(location => location.id === report.location);
+      if (!localLocation) throw new Error('Selecciona una ubicación válida.');
+      const created = await this.api.createIncident(toCreateIncident(report, localLocation.name));
+      return created.code;
+    }
+
     return this.repository.transaction('readwrite', (s) => s.add(report));
   }
 
   // La transaccion vuelve a leer el expediente para evitar sobrescribir cambios concurrentes
-  async updateReport(code: string, state: string, note: string, priority: string): Promise<void> {
+  async updateReport(code: string, state: string, note: string, priority: string, version?: number): Promise<IncidentReport | void> {
+    if (!this.config.demoMode) {
+      if (version === undefined) throw new Error('El expediente no incluye una versión válida. Recárgalo antes de guardar.');
+      return fromIncidentDto(await this.api.changeIncident(code, toChangeIncident(state, priority, note, version)));
+    }
     const user = this.auth.user();
     const db = await this.repository.openDatabase();
     await new Promise<void>((resolve, reject) => {
@@ -215,6 +258,7 @@ export class DataService {
   }
 
   locationName(id: string): string {
+    if (this.locations.some(location => location.name === id)) return id;
     const original = this.originalLocations.find((l) => l.id === id);
     const key = original
       ? this.originalLocations.indexOf(original) + 1

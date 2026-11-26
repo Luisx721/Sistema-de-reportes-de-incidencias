@@ -31,6 +31,7 @@ export interface IncidentReport {
   ownerId?: number;
   priority?: string;
   responsibleUnit?: string;
+  version?: number;
 }
 
 export interface SessionUser {

@@ -2,15 +2,14 @@
   <header class="page-heading">
     <p class="eyebrow">EXPLORA EL CAMPUS</p>
     <h1>Incidencias a la vista.</h1>
-    <p>
-      Explora ejemplos y reportes guardados en este navegador. Esta vista no representa información
-      real de la universidad.
-    </p>
+    <p>{{ listingNotice }}</p>
   </header>
 
   @if (loadError) {
     <p role="alert">{{ loadError }}</p>
   }
+  @if (catalogsLoading) { <p role="status">Cargando categorías y ubicaciones…</p> }
+  @if (catalogsError) { <p role="alert">{{ catalogsError }} <button type="button" (click)="retryCatalogs()">Reintentar</button></p> }
   @if (mapError && isMapView) {
     <p role="status">{{ mapError }}</p>
   }
@@ -23,6 +22,7 @@
           id="filter-category"
           [(ngModel)]="selectedCategory"
           (ngModelChange)="onFilterChange()"
+          [disabled]="catalogsLoading || !!catalogsError"
         >
           <option value="">Todas las categorías</option>
           @for (cat of dataService.categories; track cat) {
@@ -36,6 +36,7 @@
           id="filter-location"
           [(ngModel)]="selectedLocationId"
           (ngModelChange)="onFilterChange()"
+          [disabled]="catalogsLoading || !!catalogsError"
         >
           <option value="">Todas las ubicaciones</option>
           @for (loc of dataService.locations; track loc.id) {

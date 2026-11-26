@@ -1,4 +1,8 @@
 import { test, expect, Page } from '@playwright/test';
+// Esta suite E2E usa exclusivamente demo local; no necesita la API Rol 2 ni PostgreSQL.
+test.beforeEach(async ({ page }) => {
+  await page.addInitScript(() => localStorage.setItem('ues-api-mode', 'demo'));
+});
 async function login(page: Page, user: string, password = 'DemoUES2026!') {
   await page.goto('/login');
   await page.locator('#email').fill(user);

@@ -1,12 +1,14 @@
 import { Injectable } from '@angular/core';
 import { IncidentReport } from '../../domain/models/incident.model';
 import { jsPDF } from 'jspdf';
+// Servicio para exportar reportes a PDF (individual) y CSV (listado). 
 @Injectable({ providedIn: 'root' })
 export class DocumentService {
   // Comprobante local sin atribuir firma ni validez institucional
   pdf(report: IncidentReport): void {
     const pdf = new jsPDF({ format: 'letter' });
     let y = 22;
+      // Escribe texto con salto de línea automático y crea página nueva si se llena
     const line = (text: string) => {
       for (const row of pdf.splitTextToSize(text, 175)) {
         if (y > 250) {
@@ -20,6 +22,7 @@ export class DocumentService {
     pdf.setFontSize(16);
     line('Reportes UES');
     pdf.setFontSize(11);
+    // Datos del reporte, seguidos de los espacios para firma y sello
     for (const text of [
       'Comprobante de demostracion',
       'Codigo: ' + report.code,
@@ -42,6 +45,7 @@ export class DocumentService {
   csv(reports: IncidentReport[]): void {
     const cell = (value: string) =>
       '"' + (/^[=+@\-\t\r]/.test(value) ? "'" + value : value).replaceAll('"', '""') + '"';
+   // Encabezados + una fila por reporte (fecha de cierre solo si está resuelto o cerrado)
     const rows = [
       [
         'Código',
@@ -66,11 +70,13 @@ export class DocumentService {
         r.history.at(-1)?.note || '',
       ]),
     ];
+    // El BOM (\uFEFF) hace que Excel muestre bien las tildes
     const url = URL.createObjectURL(
       new Blob(['\uFEFF' + rows.map((r) => r.map(cell).join(',')).join('\r\n')], {
         type: 'text/csv;charset=utf-8',
       }),
     );
+     // Descarga el archivo y libera la URL temporal
     const link = document.createElement('a');
     link.href = url;
     link.download = 'incidencias.csv';

@@ -2,6 +2,7 @@ import { ChangeDetectorRef, Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { DataService } from '../../../application/services/data.service';
+import { AuthService } from '../../../application/services/auth.service';
 import { IncidentReport } from '../../../domain/models/incident.model';
 import { BadgeComponent } from '../../shared/components/badge/badge.component';
 
@@ -17,6 +18,7 @@ export class HomeComponent implements OnInit {
   private changeDetector = inject(ChangeDetectorRef);
 
   dataService = inject(DataService);
+  auth = inject(AuthService);
   recentReports: IncidentReport[] = [];
   loading = true;
   error = false;
@@ -25,12 +27,12 @@ export class HomeComponent implements OnInit {
   async ngOnInit(): Promise<void> {
     try {
       try {
+        await this.auth.ready;
         if (!this.dataService.demoMode) {
-          this.error = true;
-          this.errorMessage = 'La API Rol 2 todavía no ofrece un listado público de incidencias.';
-          return;
+          if (!this.auth.user()) return;
+        } else {
+          await this.dataService.seed();
         }
-        await this.dataService.seed();
         const all = await this.dataService.getReports();
         all.sort((a, b) => b.created.localeCompare(a.created));
         this.recentReports = all.slice(0, 3);

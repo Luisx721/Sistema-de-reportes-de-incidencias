@@ -34,7 +34,7 @@ export class IncidenciasComponent implements OnInit, AfterViewInit, OnDestroy {
   get listingNotice(): string {
     return this.dataService.demoMode
       ? 'Explora ejemplos y reportes guardados en este navegador. Esta vista no representa información real de la universidad.'
-      : 'La API Rol 2 no expone un listado público de incidencias. Usa el código de seguimiento para consultar un expediente.';
+      : 'La lista muestra solo las incidencias autorizadas para tu sesión. Inicia sesión con un perfil operativo para consultar los registros.';
   }
   dataService = inject(DataService);
   private route = inject(ActivatedRoute);
@@ -72,17 +72,17 @@ export class IncidenciasComponent implements OnInit, AfterViewInit, OnDestroy {
           catch { this.catalogsError = 'No se pudieron cargar los catálogos desde la API.'; }
           finally { this.catalogsLoading = false; }
         }
-        if (!this.dataService.demoMode) {
-          this.loadError = 'La API Rol 2 no expone un listado público. Consulta el expediente con su código de seguimiento.';
-          return;
-        }
-        await this.dataService.seed();
+        if (this.dataService.demoMode) await this.dataService.seed();
         const reports = await this.dataService.getReports();
         reports.sort((a, b) => b.created.localeCompare(a.created));
         this.allReports = reports;
         this.applyFilters();
-      } catch (e) {
-        this.loadError = 'No se pudieron cargar los reportes. Recarga la página para reintentar.';
+      } catch (e: any) {
+        this.loadError = e?.status === 401
+          ? 'Inicia sesión para consultar las incidencias permitidas para tu perfil.'
+          : e?.status === 403
+            ? 'Tu perfil no tiene permiso para consultar el listado de incidencias.'
+            : 'No se pudieron cargar los reportes. Recarga la página para reintentar.';
       }
     } finally {
       this.changeDetector.markForCheck();
@@ -220,7 +220,7 @@ export class IncidenciasComponent implements OnInit, AfterViewInit, OnDestroy {
 
     for (const loc of this.dataService.locations) {
       const count = this.filteredReports.filter((r) => r.location === loc.id).length;
-      if (!count || !loc.lat || !loc.lng) continue;
+      if (!count || loc.lat === null || loc.lng === null) continue;
 
       const isSelected = this.selectedMarkerLocation?.id === loc.id;
       // Construir etiquetas como texto para no interpretar nombres del catalogo como HTML

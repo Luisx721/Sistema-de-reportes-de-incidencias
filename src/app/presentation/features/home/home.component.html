@@ -1,4 +1,10 @@
 <main id="contenido" class="wrap main-content">
+  @if (!dataService.demoMode && auth.user(); as session) {
+    <p class="session-welcome">Sesión activa: {{ session.name }} · {{ session.profile }}{{ session.area ? ' · ' + session.area : '' }}</p>
+  }
+  @if (!dataService.demoMode && auth.user(); as session) {
+    <p class="session-welcome">Sesión activa: {{ session.name }} · {{ session.profile }}{{ session.area ? ' · ' + session.area : '' }}</p>
+  }
   <!-- Bienvenida al portal -->
   <section class="hero">
     <div class="hero-copy">

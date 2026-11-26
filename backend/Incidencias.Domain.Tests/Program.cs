@@ -33,7 +33,7 @@ if (Environment.GetEnvironmentVariable("INCIDENCIAS_DB") is { Length: > 0 } conn
 {
     var store = new PostgresIncidentStore(connectionString);
     var catalogs = await store.GetCatalogsAsync(CancellationToken.None);
-    Check(catalogs.Categories.Count > 0 && catalogs.Locations.Count > 0, "El endpoint de catálogos debe proporcionar valores activos para registrar.");
+    Check(catalogs.Categories.Count > 0 && catalogs.Buildings.Count > 0 && catalogs.Locations.Count > 0, "El endpoint de catálogos debe proporcionar categorías, edificios y ubicaciones activos.");
     var catalogCategory = catalogs.Categories[0];
     var catalogLocation = catalogs.Locations[0];
     var createdFromCatalog = await store.CreateAsync(new CreateIncidentDto(catalogCategory, catalogLocation,
@@ -41,7 +41,7 @@ if (Environment.GetEnvironmentVariable("INCIDENCIAS_DB") is { Length: > 0 } conn
     Check(createdFromCatalog.Category == catalogCategory && createdFromCatalog.Location == catalogLocation,
         "El registro debe aceptar valores obtenidos del endpoint de catálogos.");
     var catalogJson = JsonSerializer.Serialize(catalogs, new JsonSerializerOptions(JsonSerializerDefaults.Web));
-    Check(catalogJson.Contains("categories") && catalogJson.Contains("locations"), "El mapeo JSON del catálogo debe usar las propiedades consumidas por Angular.");
+    Check(catalogJson.Contains("categories") && catalogJson.Contains("buildings") && catalogJson.Contains("locations"), "El mapeo JSON del catálogo debe usar las propiedades consumidas por Angular.");
     var authority = new SessionDto("integration-test", "Integration test", "Autoridad", null, DateTimeOffset.UtcNow);
     foreach (var filter in new[]
     {

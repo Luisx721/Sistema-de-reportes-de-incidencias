@@ -12,7 +12,7 @@ export interface PublicStatusDto {
 export interface CreateIncidentDto { category: string; location: string; description: string; reference: string | null; }
 export interface ChangeIncidentDto { state: string; priority: string; note: string; version: number; }
 export interface SessionDto { token: string; name: string; profile: string; area: string | null; expiresAt: string; }
-export interface IncidentCatalogsDto { categories: string[]; locations: string[]; }
+export interface IncidentCatalogsDto { categories: string[]; buildings: string[]; locations: string[]; }
 
 export function toCreateIncident(report: IncidentReport, locationName: string): CreateIncidentDto {
   return { category: report.category, location: locationName, description: report.description,

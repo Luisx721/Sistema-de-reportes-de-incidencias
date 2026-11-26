@@ -3,8 +3,8 @@ export interface CampusLocation {
   name: string;
   x: number;
   y: number;
-  lat: number;
-  lng: number;
+  lat: number | null;
+  lng: number | null;
 }
 
 export interface HistoryEntry {

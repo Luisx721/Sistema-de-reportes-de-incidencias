@@ -47,7 +47,7 @@ export class DataService {
       .map((c) => c.name);
   }
   get locations(): CampusLocation[] {
-    if (!this.config.demoMode) return (this.apiCatalogs?.locations ?? []).map(name => ({ id: name, name, x: 50, y: 50, lat: 0, lng: 0 }));
+    if (!this.config.demoMode) return (this.apiCatalogs?.locations ?? []).map(name => ({ id: name, name, x: 0, y: 0, lat: null, lng: null }));
     return this.admin
       .locations()
       .filter((l) => l.active)
@@ -73,7 +73,7 @@ export class DataService {
   async loadCatalogs(): Promise<void> {
     if (this.config.demoMode) return;
     const catalogs = await this.api.getCatalogs();
-    this.apiCatalogs = { categories: [...catalogs.categories], locations: [...catalogs.locations] };
+    this.apiCatalogs = { categories: [...catalogs.categories], buildings: [...catalogs.buildings], locations: [...catalogs.locations] };
   }
 
   private readonly samples: [string, string, string, string, number][] = [

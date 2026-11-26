@@ -37,10 +37,13 @@ public sealed class PostgresIncidentStore(string connectionString) : IIncidentSt
         var categories=new List<string>();
         await using(var cmd=new NpgsqlCommand("SELECT c.c_nombre FROM categorias c WHERE c.c_activo ORDER BY c.c_nombre",db))
         await using(var rd=await cmd.ExecuteReaderAsync(ct)) while(await rd.ReadAsync(ct)) categories.Add(rd.GetString(0));
+        var buildings=new List<string>();
+        await using(var cmd=new NpgsqlCommand("SELECT e.e_nombre FROM edificios e WHERE e.e_activo AND EXISTS (SELECT 1 FROM ubicaciones u WHERE u.id_edificio=e.id_edificio AND u.ub_activo) ORDER BY e.e_nombre",db))
+        await using(var rd=await cmd.ExecuteReaderAsync(ct)) while(await rd.ReadAsync(ct)) buildings.Add(rd.GetString(0));
         var locations=new List<string>();
         await using(var cmd=new NpgsqlCommand("SELECT e.e_nombre || ' - ' || u.ub_nombre FROM ubicaciones u JOIN edificios e USING(id_edificio) WHERE u.ub_activo AND e.e_activo ORDER BY e.e_nombre,u.ub_nombre",db))
         await using(var rd=await cmd.ExecuteReaderAsync(ct)) while(await rd.ReadAsync(ct)) locations.Add(rd.GetString(0));
-        return new(categories,locations);
+        return new(categories,buildings,locations);
     }
     public async Task<IncidentDto> CreateAsync(CreateIncidentDto q,CancellationToken ct)
     {

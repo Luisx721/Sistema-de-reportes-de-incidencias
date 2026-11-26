@@ -10,7 +10,7 @@ public sealed record IncidentDto(string Code, string Category, string Location, 
 }
 public sealed record HistoryDto(DateTimeOffset Date, string State, string Note);
 public sealed record CreateIncidentDto(string Category, string Location, string Description, string? Reference);
-public sealed record IncidentCatalogsDto(IReadOnlyList<string> Categories, IReadOnlyList<string> Locations);
+public sealed record IncidentCatalogsDto(IReadOnlyList<string> Categories, IReadOnlyList<string> Buildings, IReadOnlyList<string> Locations);
 public sealed record ChangeIncidentDto(string State, string Priority, string Note, long Version);
 public sealed record LoginDto(string Username, string Password);
 public sealed record SessionDto(string Token, string Name, string Profile, string? Area, DateTimeOffset ExpiresAt);

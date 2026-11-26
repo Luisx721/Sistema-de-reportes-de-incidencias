@@ -87,7 +87,7 @@
   <div class="results-meta">
     <p id="result-count" role="status">
       {{ filteredReports.length }} incidencia{{ filteredReports.length === 1 ? '' : 's' }} · datos
-      de demostración
+      @if (dataService.demoMode) { · datos de demostración } @else { · registros autorizados por la API }
     </p>
     <button class="text-button" id="clear-filters" type="button" (click)="clearFilters()">
       Limpiar filtros
@@ -153,7 +153,8 @@
   <section id="map-panel" [hidden]="!isMapView" aria-label="Mapa de incidencias">
     <div class="map-notice">
       Mapa interactivo con OpenStreetMap · Ubicaciones del campus universitario (Facultad
-      Multidisciplinaria Oriental, UES).
+      Multidisciplinaria Oriental, UES). @if (!dataService.demoMode) { La API aún no guarda coordenadas;
+      las incidencias permanecen disponibles en el listado. }
     </div>
     <div class="map-layout">
       <!-- Vista del mapa OpenStreetMap -->
@@ -177,13 +178,13 @@
             </a>
           }
         } @else {
-          <h2>
-            {{ filteredReports.length ? 'Selecciona una ubicación' : 'No hay coincidencias' }}
+      <h2>
+            {{ filteredReports.length ? (dataService.demoMode ? 'Selecciona una ubicación' : 'Ubicaciones sin coordenadas') : 'No hay coincidencias' }}
           </h2>
           <p>
             {{
               filteredReports.length
-                ? 'Toca un marcador en el mapa para ver sus incidencias. También puedes usar el listado.'
+                ? (dataService.demoMode ? 'Toca un marcador en el mapa para ver sus incidencias. También puedes usar el listado.' : 'La base oficial no almacena latitud y longitud. Consulta estas incidencias desde el listado.')
                 : 'Prueba otra combinación de filtros.'
             }}
           </p>

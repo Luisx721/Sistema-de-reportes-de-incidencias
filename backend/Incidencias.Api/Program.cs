@@ -1,12 +1,13 @@
-using System.Security.Cryptography;
+Ôªøusing System.Security.Cryptography;
 using Incidencias.Application;
 using Incidencias.Infrastructure;
 
 var builder = WebApplication.CreateBuilder(args);
-builder.Services.AddSingleton<IIncidentStore>(_ => new PostgresIncidentStore(
-    builder.Configuration.GetConnectionString("Incidencias") ??
-    Environment.GetEnvironmentVariable("INCIDENCIAS_DB") ??
-    "Host=localhost;Port=55432;Database=incidencias_rol2;Username=rol2_app;Password=rol2_dev_local"));
+var connectionString = builder.Configuration.GetConnectionString("Incidencias") ??
+    Environment.GetEnvironmentVariable("INCIDENCIAS_DB");
+if (string.IsNullOrWhiteSpace(connectionString))
+    throw new InvalidOperationException("Configura ConnectionStrings:Incidencias mediante configuraci√≥n local o INCIDENCIAS_DB.");
+builder.Services.AddSingleton<IIncidentStore>(_ => new PostgresIncidentStore(connectionString));
 builder.Services.AddCors(options => options.AddDefaultPolicy(policy => policy.WithOrigins(
     builder.Configuration.GetSection("Cors:Origins").Get<string[]>() ?? ["http://localhost:4200", "http://127.0.0.1:4200"])
     .AllowAnyHeader().AllowAnyMethod()));
@@ -46,16 +47,16 @@ app.MapGet("/api/incidencias", async (HttpRequest request, IIncidentStore store,
 {
     var session = await Current(request, store, ct);
     if (session is null) return Results.Unauthorized();
-    if (session.Profile is not ("Jefatura" or "Ordenanza" or "Mantenimiento" or "Desarrollo FÌsico" or "Autoridad")) return Results.Forbid();
+    if (session.Profile is not ("Jefatura" or "Ordenanza" or "Mantenimiento" or "Desarrollo F√≠sico" or "Autoridad")) return Results.Forbid();
     DateOnly? from = null, to = null;
     if (request.Query.TryGetValue("from", out var fromText) && !string.IsNullOrWhiteSpace(fromText))
     {
-        if (!DateOnly.TryParse(fromText, out var parsedFrom)) return Results.BadRequest(new { error = "La fecha inicial no es v·lida." });
+        if (!DateOnly.TryParse(fromText, out var parsedFrom)) return Results.BadRequest(new { error = "La fecha inicial no es v√°lida." });
         from = parsedFrom;
     }
     if (request.Query.TryGetValue("to", out var toText) && !string.IsNullOrWhiteSpace(toText))
     {
-        if (!DateOnly.TryParse(toText, out var parsedTo)) return Results.BadRequest(new { error = "La fecha final no es v·lida." });
+        if (!DateOnly.TryParse(toText, out var parsedTo)) return Results.BadRequest(new { error = "La fecha final no es v√°lida." });
         to = parsedTo;
     }
     var filter = new IncidentFilterDto(request.Query["query"], request.Query["category"], request.Query["location"], request.Query["state"], from, to);
@@ -80,4 +81,5 @@ app.MapPut("/api/incidencias/{code}", async (string code, ChangeIncidentDto chan
 });
 app.MapGet("/health", () => Results.Ok(new { status = "ok" }));
 app.Run();
+
 

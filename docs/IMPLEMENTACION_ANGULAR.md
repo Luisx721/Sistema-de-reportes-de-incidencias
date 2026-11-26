@@ -76,3 +76,7 @@ Las pruebas cubren registro, consulta, PDF, cuentas incorrectas y desactivadas, 
 ## Integración posterior
 
 Conservar Angular como cliente de una API HTTPS en C#. Los permisos, transiciones, validación de archivos, unicidad de códigos y transacciones deberán verificarse también en la API. PostgreSQL 17 almacenará cuentas, áreas, catálogos, incidencias e historial; las fotos requieren almacenamiento persistente. No conectar PostgreSQL directamente al navegador. El diccionario permite prioridad nula hasta la evaluación y reportes comunitarios sin área solicitante.
+
+## Estado de conexión a la API Rol 2
+
+La interfaz continúa conectada a sus adaptadores locales. La integración requiere un `HttpClient` con URL configurable, DTO mapping al contrato camelCase de Rol 2 y almacenamiento/gestión de sesión separado de los datos de incidencias. El recorrido debe mostrar mensajes para `401`, `403` y `409`; el último debe recargar la versión del expediente antes de permitir reintentar. `/api/seguimiento/{code}` es el único endpoint anónimo de consulta y su DTO no incluye identidad ni notas libres. El backend Rol 2 ya está integrado y verificado contra la BD oficial `midb`, con las extensiones de sesiones/versiones y el seed de desarrollo en `db/official/`; queda pendiente conectar la interfaz Angular y acordar los catálogos y las cuentas institucionales finales.

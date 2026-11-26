@@ -450,6 +450,23 @@
             }
           </div>
           <div class="field">
+            <label for="account-password">
+              {{ editingAccount?.id ? 'Nueva contraseña (opcional)' : 'Contraseña' }}
+            </label>
+            <input
+              type="password"
+              id="account-password"
+              [(ngModel)]="accountForm.password"
+              name="password"
+              [placeholder]="editingAccount?.id ? 'Dejar vacío para conservar la actual' : 'Mínimo 6 caracteres'"
+              (ngModelChange)="accountErrors.password = ''"
+              [attr.aria-invalid]="!!accountErrors.password"
+            />
+            @if (accountErrors.password) {
+              <span class="field-error">{{ accountErrors.password }}</span>
+            }
+          </div>
+          <div class="field">
             <label for="account-role">Perfil</label>
             <select
               id="account-role"
@@ -472,15 +489,30 @@
           </div>
           <div class="field">
             <label for="account-area">Área de trabajo</label>
-            <input
-              type="text"
-              id="account-area"
-              [(ngModel)]="accountForm.area"
-              name="area"
-              placeholder="Ej. Servicios Generales"
-              (ngModelChange)="accountErrors.area = ''"
-              [attr.aria-invalid]="!!accountErrors.area"
-            />
+            @if (!adminService.demoMode && adminService.areas().length > 0) {
+              <select
+                id="account-area"
+                [(ngModel)]="accountForm.area"
+                name="area"
+                (ngModelChange)="accountErrors.area = ''"
+                [attr.aria-invalid]="!!accountErrors.area"
+              >
+                <option value="">Selecciona un área</option>
+                @for (area of adminService.areas(); track area.id) {
+                  <option [value]="area.name">{{ area.name }}</option>
+                }
+              </select>
+            } @else {
+              <input
+                type="text"
+                id="account-area"
+                [(ngModel)]="accountForm.area"
+                name="area"
+                placeholder="Ej. Servicios Generales"
+                (ngModelChange)="accountErrors.area = ''"
+                [attr.aria-invalid]="!!accountErrors.area"
+              />
+            }
             @if (accountErrors.area) {
               <span class="field-error">{{ accountErrors.area }}</span>
             }
@@ -593,6 +625,24 @@
               (ngModelChange)="catalogError = ''"
               [attr.aria-invalid]="!!catalogError"
             />
+            @if (!adminService.demoMode) {
+          <div class="field">
+            <label for="catalog-parent">
+              {{ catalogSubtab === 'categories' ? 'Área responsable' : 'Edificio' }}
+            </label>
+            <select id="catalog-parent" [(ngModel)]="catalogFormParentId" name="catalogParent">
+              @if (catalogSubtab === 'categories') {
+                @for (area of adminService.areas(); track area.id) {
+                  <option [ngValue]="area.id">{{ area.name }}</option>
+                }
+              } @else {
+                @for (b of adminService.buildings(); track b.id) {
+                  <option [ngValue]="b.id">{{ b.name }}</option>
+                }
+              }
+            </select>
+          </div>
+        }
             @if (catalogError) {
               <span class="field-error">{{ catalogError }}</span>
             }

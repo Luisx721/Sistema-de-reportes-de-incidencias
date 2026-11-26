@@ -38,7 +38,13 @@ export class AuthService {
       try {
         const session = await this.api.login(username.trim(), password);
         sessionStorage.setItem('ues-api-token', session.token);
-        this.current.set({ name: session.name, profile: session.profile, area: session.area ?? undefined, demo: false });
+        this.current.set({
+          id: session.userId ?? undefined,
+          name: session.name,
+          profile: session.profile,
+          area: session.area ?? undefined,
+          demo: false,
+        });
         return true;
       } catch (error: any) {
         if (error?.status === 401) return false;
@@ -117,7 +123,13 @@ export class AuthService {
     if (this.config.demoMode) return;
     try {
       const session = await this.api.currentSession();
-      this.current.set({ name: session.name, profile: session.profile, area: session.area ?? undefined, demo: false });
+      this.current.set({
+        id: session.userId ?? undefined,
+        name: session.name,
+        profile: session.profile,
+        area: session.area ?? undefined,
+        demo: false,
+      });
     } catch {
       sessionStorage.removeItem('ues-api-token');
       this.current.set(null);

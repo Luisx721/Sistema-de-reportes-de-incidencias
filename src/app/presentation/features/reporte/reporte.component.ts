@@ -29,6 +29,7 @@ export class ReporteComponent implements OnDestroy, OnInit {
 
   category = '';
   location = '';
+  urgency = 'Media';
   reference = '';
   description = '';
   reporterName = '';
@@ -128,9 +129,6 @@ export class ReporteComponent implements OnDestroy, OnInit {
     }
 
     this.photoError = errors.join(' ');
-    if (this.photos.length && !this.dataService.demoMode) {
-      this.photoError = [this.photoError, 'La API todavía no tiene carga de archivos; estas fotos solo se conservan como vista previa y no se enviarán al servidor.'].filter(Boolean).join(' ');
-    }
   }
 
   removePhoto(index: number): void {
@@ -144,6 +142,7 @@ export class ReporteComponent implements OnDestroy, OnInit {
     this.photos = [];
     this.category = '';
     this.location = '';
+    this.urgency = 'Media';
     this.reference = '';
     this.description = '';
     this.reporterName = '';
@@ -200,6 +199,7 @@ export class ReporteComponent implements OnDestroy, OnInit {
           state: this.dataService.states[0],
           category: this.category,
           location: this.location,
+          urgency: this.urgency,
           reference: this.reference.trim(),
           description: this.description.trim(),
           reporterName: this.reporterName.trim(),

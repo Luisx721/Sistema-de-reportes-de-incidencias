@@ -3,13 +3,12 @@ import { AdminService } from './admin.service';
 import { AuthService } from './auth.service';
 import { allowedTransitions, canEditReport } from '../../domain/policies/permissions';
 import { Injectable, inject } from '@angular/core';
-import { CampusLocation, IncidentReport } from '../../domain/models/incident.model';
+import { CampusLocation, IncidentReport, IncidentFilters } from '../../domain/models/incident.model';
 import { API_CONFIG } from '../../infrastructure/api-config';
 import { ApiClient } from '../../infrastructure/api-client';
 import { fromIncidentDto, fromPublicStatus, toChangeIncident, toCreateIncident } from '../../infrastructure/api-mappers';
 import { IncidentCatalogsDto } from '../../infrastructure/api-mappers';
 
-export interface IncidentFilters { query?: string; category?: string; location?: string; state?: string; from?: string; to?: string; }
 
 @Injectable({
   providedIn: 'root',
@@ -46,6 +45,11 @@ export class DataService {
       .filter((c) => c.active)
       .map((c) => c.name);
   }
+
+  get urgencies(): string[] {
+    if (!this.config.demoMode) return this.apiCatalogs?.urgencies ?? ['Baja', 'Media', 'Alta'];
+    return ['Baja', 'Media', 'Alta'];
+  }
   get locations(): CampusLocation[] {
     if (!this.config.demoMode) return (this.apiCatalogs?.locations ?? []).map(name => ({ id: name, name, x: 50, y: 50, lat: 0, lng: 0 }));
     return this.admin
@@ -73,7 +77,11 @@ export class DataService {
   async loadCatalogs(): Promise<void> {
     if (this.config.demoMode) return;
     const catalogs = await this.api.getCatalogs();
-    this.apiCatalogs = { categories: [...catalogs.categories], locations: [...catalogs.locations] };
+    this.apiCatalogs = {
+      categories: [...catalogs.categories],
+      locations: [...catalogs.locations],
+      urgencies: catalogs.urgencies ? [...catalogs.urgencies] : ['Baja', 'Media', 'Alta'],
+    };
   }
 
   private readonly samples: [string, string, string, string, number][] = [
@@ -152,9 +160,26 @@ export class DataService {
       throw new Error('Selecciona un catalogo activo');
 
     if (!this.config.demoMode) {
-      const localLocation = this.locations.find(location => location.id === report.location);
+      const localLocation = this.locations.find((location) => location.id === report.location);
       if (!localLocation) throw new Error('Selecciona una ubicación válida.');
+
       const created = await this.api.createIncident(toCreateIncident(report, localLocation.name));
+
+      // Subir fotografías adjuntas si existen (máx. 3)
+      if (report.photos && report.photos.length > 0) {
+        for (const photo of report.photos) {
+          try {
+            await this.api.uploadPhoto(created.code, photo);
+          } catch (photoErr) {
+            console.warn('No se pudo subir una fotografía:', photoErr);
+          }
+        }
+      }
+
+      if (created.isDuplicate) {
+        sessionStorage.setItem(`ues-dup-${created.code}`, '1');
+      }
+
       return created.code;
     }
 

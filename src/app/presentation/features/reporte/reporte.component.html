@@ -254,8 +254,11 @@
         </button>
       </div>
       <p class="local-note">
-        @if (dataService.demoMode) { Demostración: el reporte se guarda en este navegador. No se envía a la universidad. }
-        @else { El reporte se enviará a la API institucional. La persistencia de fotografías en servidor sigue pendiente; las fotos no se cargarán. }
+      @if (dataService.demoMode) {
+      Demostración: el reporte se guarda en este navegador. No se envía a la universidad.
+       } @else {
+        El reporte y sus fotografías adjuntas se enviarán directamente al sistema institucional.
+        }
       </p>
     </form>
 

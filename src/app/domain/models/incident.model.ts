@@ -32,6 +32,9 @@ export interface IncidentReport {
   priority?: string;
   responsibleUnit?: string;
   version?: number;
+  urgency?: string;
+  closed?: string;
+  isDuplicate?: boolean;
 }
 
 export interface SessionUser {
@@ -55,4 +58,14 @@ export interface CatalogItem {
   id: number;
   name: string;
   active: boolean;
+}
+
+export interface IncidentFilters {
+  query?: string;
+  category?: string;
+  location?: string;
+  state?: string;
+  urgency?: string;
+  from?: string;
+  to?: string;
 }

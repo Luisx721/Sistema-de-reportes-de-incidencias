@@ -1,10 +1,10 @@
 import { BackupService } from '../../../application/services/backup.service';
-import { ChangeDetectorRef, Component, HostListener, inject } from '@angular/core';
+import { ChangeDetectorRef, Component, HostListener, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { AdminService } from '../../../application/services/admin.service';
+import { AdminCatalogItem, AdminService } from '../../../application/services/admin.service';
 import { ToastService } from '../../../application/services/toast.service';
-import { Account, CatalogItem } from '../../../domain/models/incident.model';
+import { Account } from '../../../domain/models/incident.model';
 
 @Component({
   selector: 'app-admin',
@@ -12,9 +12,7 @@ import { Account, CatalogItem } from '../../../domain/models/incident.model';
   imports: [CommonModule, FormsModule],
   templateUrl: './admin.component.html',
 })
-export class AdminComponent {
-  // Dependencias y estado de la vista
-
+export class AdminComponent implements OnInit {
   private changeDetector = inject(ChangeDetectorRef);
 
   backup = inject(BackupService);
@@ -27,25 +25,34 @@ export class AdminComponent {
   activeTab: 'cuentas' | 'catalogos' | 'respaldo' = 'cuentas';
   catalogSubtab: 'categories' | 'locations' = 'categories';
 
-  // Filtros de cuentas
   accountSearch = '';
   accountFilterRole = '';
   accountFilterStatus = '';
 
-  // Estado de los formularios y confirmaciones
   showModalAccount = false;
   editingAccount: Account | null = null;
-  accountForm = { name: '', username: '', role: '', area: '' };
-  accountErrors = { name: '', username: '', role: '', area: '' };
+  accountForm = { name: '', username: '', password: '', role: '', area: '' };
+  accountErrors = { name: '', username: '', password: '', role: '', area: '' };
   accountPendingDeactivation: Account | null = null;
 
   showModalCatalog = false;
-  editingCatalogItem: CatalogItem | null = null;
+  editingCatalogItem: AdminCatalogItem | null = null;
   catalogFormName = '';
+  catalogFormParentId = 0;
   catalogError = '';
-  catalogPendingDeactivation: CatalogItem | null = null;
+  catalogPendingDeactivation: AdminCatalogItem | null = null;
 
   showModalRestore = false;
+
+  async ngOnInit(): Promise<void> {
+    try {
+      await this.adminService.loadAll();
+    } catch {
+      this.toastService.show('No se pudieron cargar los datos administrativos desde la API.');
+    } finally {
+      this.changeDetector.markForCheck();
+    }
+  }
 
   @HostListener('document:keydown.escape')
   onEscape(): void {
@@ -72,7 +79,7 @@ export class AdminComponent {
     });
   }
 
-  get activeCatalogList(): CatalogItem[] {
+  get activeCatalogList(): AdminCatalogItem[] {
     return this.catalogSubtab === 'categories'
       ? this.adminService.categories()
       : this.adminService.locations();
@@ -86,8 +93,8 @@ export class AdminComponent {
 
   openNewAccountModal(): void {
     this.editingAccount = null;
-    this.accountForm = { name: '', username: '', role: '', area: '' };
-    this.accountErrors = { name: '', username: '', role: '', area: '' };
+    this.accountForm = { name: '', username: '', password: '', role: '', area: '' };
+    this.accountErrors = { name: '', username: '', password: '', role: '', area: '' };
     this.showModalAccount = true;
   }
 
@@ -96,23 +103,28 @@ export class AdminComponent {
     this.accountForm = {
       name: acc.name,
       username: acc.username,
+      password: '',
       role: acc.role,
       area: acc.area,
     };
-    this.accountErrors = { name: '', username: '', role: '', area: '' };
+    this.accountErrors = { name: '', username: '', password: '', role: '', area: '' };
     this.showModalAccount = true;
   }
 
-  saveAccountForm(): void {
+  async saveAccountForm(): Promise<void> {
     try {
       const name = this.accountForm.name.trim();
       const username = this.accountForm.username.trim();
+      const password = this.accountForm.password.trim();
       const role = this.accountForm.role;
       const area = this.accountForm.area.trim();
 
       this.accountErrors = {
         name: !name ? 'Ingresa el nombre completo.' : '',
         username: !username ? 'Ingresa el nombre de usuario.' : '',
+        password: !this.editingAccount && !this.adminService.demoMode && !password
+          ? 'Ingresa una contraseña para la cuenta.'
+          : '',
         role: !role ? 'Selecciona el perfil de usuario.' : '',
         area: !area ? 'Ingresa el área de trabajo.' : '',
       };
@@ -133,16 +145,18 @@ export class AdminComponent {
       if (
         this.accountErrors.name ||
         this.accountErrors.username ||
+        this.accountErrors.password ||
         this.accountErrors.role ||
         this.accountErrors.area
       ) {
         return;
       }
 
-      this.adminService.saveAccount({
+      await this.adminService.saveAccount({
         id: this.editingAccount?.id,
         name,
         username,
+        password: password || undefined,
         role,
         area,
       });
@@ -153,10 +167,12 @@ export class AdminComponent {
           ? 'Cuenta actualizada correctamente.'
           : 'Nueva cuenta creada exitosamente.',
       );
-    } catch (error) {
+    } catch (error: any) {
       this.toastService.show(
-        error instanceof Error ? error.message : 'No se pudo guardar el cambio',
+        error?.error?.error || (error instanceof Error ? error.message : 'No se pudo guardar el cambio'),
       );
+    } finally {
+      this.changeDetector.markForCheck();
     }
   }
 
@@ -164,49 +180,60 @@ export class AdminComponent {
     this.accountPendingDeactivation = acc;
   }
 
-  confirmDeactivateAccount(): void {
+  async confirmDeactivateAccount(): Promise<void> {
     try {
       if (this.accountPendingDeactivation) {
-        this.adminService.setAccountActive(this.accountPendingDeactivation.id, false);
+        await this.adminService.setAccountActive(this.accountPendingDeactivation.id, false);
         this.toastService.show(
           `Cuenta de "${this.accountPendingDeactivation.name}" desactivada. Su historial se mantiene intacto.`,
         );
         this.accountPendingDeactivation = null;
       }
-    } catch (error) {
+    } catch (error: any) {
       this.toastService.show(
-        error instanceof Error ? error.message : 'No se pudo guardar el cambio',
+        error?.error?.error || (error instanceof Error ? error.message : 'No se pudo guardar el cambio'),
       );
+    } finally {
+      this.changeDetector.markForCheck();
     }
   }
 
-  reactivateAccount(acc: Account): void {
+  async reactivateAccount(acc: Account): Promise<void> {
     try {
-      this.adminService.setAccountActive(acc.id, true);
+      await this.adminService.setAccountActive(acc.id, true);
       this.toastService.show(`Cuenta de "${acc.name}" reactivada correctamente.`);
-    } catch (error) {
+    } catch (error: any) {
       this.toastService.show(
-        error instanceof Error ? error.message : 'No se pudo guardar el cambio',
+        error?.error?.error || (error instanceof Error ? error.message : 'No se pudo guardar el cambio'),
       );
+    } finally {
+      this.changeDetector.markForCheck();
     }
   }
 
-  // Validaciones y operaciones de catalogos
   openNewCatalogModal(): void {
     this.editingCatalogItem = null;
     this.catalogFormName = '';
+    this.catalogFormParentId =
+      this.catalogSubtab === 'categories'
+        ? (this.adminService.areas()[0]?.id ?? 1)
+        : (this.adminService.buildings()[0]?.id ?? 1);
     this.catalogError = '';
     this.showModalCatalog = true;
   }
 
-  openEditCatalogModal(item: CatalogItem): void {
+  openEditCatalogModal(item: AdminCatalogItem): void {
     this.editingCatalogItem = item;
     this.catalogFormName = item.name;
+    this.catalogFormParentId =
+      this.catalogSubtab === 'categories'
+        ? (item.areaId ?? this.adminService.areas()[0]?.id ?? 1)
+        : (item.buildingId ?? this.adminService.buildings()[0]?.id ?? 1);
     this.catalogError = '';
     this.showModalCatalog = true;
   }
 
-  saveCatalogForm(): void {
+  async saveCatalogForm(): Promise<void> {
     try {
       const name = this.catalogFormName.trim();
       const typeLabel = this.catalogSubtab === 'categories' ? 'categoría' : 'ubicación';
@@ -226,9 +253,11 @@ export class AdminComponent {
         return;
       }
 
-      this.adminService.saveCatalogItem(this.catalogSubtab, {
+      await this.adminService.saveCatalogItem(this.catalogSubtab, {
         id: this.editingCatalogItem?.id,
         name,
+        areaId: this.catalogSubtab === 'categories' ? Number(this.catalogFormParentId) : undefined,
+        buildingId: this.catalogSubtab === 'locations' ? Number(this.catalogFormParentId) : undefined,
       });
 
       this.showModalCatalog = false;
@@ -237,21 +266,23 @@ export class AdminComponent {
           ? 'Registro actualizado correctamente.'
           : `Nueva ${typeLabel} agregada correctamente.`,
       );
-    } catch (error) {
+    } catch (error: any) {
       this.toastService.show(
-        error instanceof Error ? error.message : 'No se pudo guardar el cambio',
+        error?.error?.error || (error instanceof Error ? error.message : 'No se pudo guardar el cambio'),
       );
+    } finally {
+      this.changeDetector.markForCheck();
     }
   }
 
-  openDeactivateCatalogModal(item: CatalogItem): void {
+  openDeactivateCatalogModal(item: AdminCatalogItem): void {
     this.catalogPendingDeactivation = item;
   }
 
-  confirmDeactivateCatalogItem(): void {
+  async confirmDeactivateCatalogItem(): Promise<void> {
     try {
       if (this.catalogPendingDeactivation) {
-        this.adminService.setCatalogItemActive(
+        await this.adminService.setCatalogItemActive(
           this.catalogSubtab,
           this.catalogPendingDeactivation.id,
           false,
@@ -261,25 +292,28 @@ export class AdminComponent {
         );
         this.catalogPendingDeactivation = null;
       }
-    } catch (error) {
+    } catch (error: any) {
       this.toastService.show(
-        error instanceof Error ? error.message : 'No se pudo guardar el cambio',
+        error?.error?.error || (error instanceof Error ? error.message : 'No se pudo guardar el cambio'),
       );
+    } finally {
+      this.changeDetector.markForCheck();
     }
   }
 
-  reactivateCatalogItem(item: CatalogItem): void {
+  async reactivateCatalogItem(item: AdminCatalogItem): Promise<void> {
     try {
-      this.adminService.setCatalogItemActive(this.catalogSubtab, item.id, true);
+      await this.adminService.setCatalogItemActive(this.catalogSubtab, item.id, true);
       this.toastService.show(`Elemento "${item.name}" reactivado correctamente.`);
-    } catch (error) {
+    } catch (error: any) {
       this.toastService.show(
-        error instanceof Error ? error.message : 'No se pudo guardar el cambio',
+        error?.error?.error || (error instanceof Error ? error.message : 'No se pudo guardar el cambio'),
       );
+    } finally {
+      this.changeDetector.markForCheck();
     }
   }
 
-  // Procesos de respaldo y restauracion
   async generateBackup(): Promise<void> {
     try {
       this.backupBusy = true;
@@ -295,6 +329,7 @@ export class AdminComponent {
       this.changeDetector.markForCheck();
     }
   }
+
   async restoreBackup(): Promise<void> {
     try {
       if (!this.backupFile || this.backupBusy) return;

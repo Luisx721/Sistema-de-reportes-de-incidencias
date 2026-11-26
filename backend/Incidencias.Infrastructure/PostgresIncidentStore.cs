@@ -1,176 +1,64 @@
-using System.Security.Cryptography;
+﻿using System.Security.Cryptography;
 using System.Text;
 using Incidencias.Application;
 using Incidencias.Domain;
 using Npgsql;
+using NpgsqlTypes;
 
 namespace Incidencias.Infrastructure;
 
-/// <summary>Concentra SQL parametrizado y transacciones para poder sustituir el DDL provisional.</summary>
+/// <summary>Adaptador de persistencia sobre el esquema oficial de ProyectoBD.</summary>
 public sealed class PostgresIncidentStore(string connectionString) : IIncidentStore
 {
-    // Se usa un hash para las claves de sesión para evitar guardarlas reutilizables en la base.
     private static string Digest(string value) => Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(value)));
-    private async Task<NpgsqlConnection> Open(CancellationToken ct)
+    private async Task<NpgsqlConnection> Open(CancellationToken ct) { var c = new NpgsqlConnection(connectionString); await c.OpenAsync(ct); return c; }
+    private const string SelectIncident = "SELECT i.i_codigo_seguimiento,c.c_nombre,u.e_nombre || ' - ' || ub.ub_nombre,i.i_descripcion,i.i_estado_actual,i.i_fecha_creacion,NULL::text,i.i_prioridad,a.a_nombre,v.version,ra.a_nombre, i.id_incidencia FROM incidencias i JOIN categorias c USING(id_categoria) JOIN ubicaciones ub USING(id_ubicacion) JOIN edificios u USING(id_edificio) LEFT JOIN areas a ON a.id_area=c.id_area LEFT JOIN areas ra ON ra.id_area=i.id_area_solicitante JOIN rol2_incident_versions v USING(id_incidencia)";
+    public async Task<SessionDto?> LoginAsync(string username,string password,CancellationToken ct)
     {
-        var connection = new NpgsqlConnection(connectionString);
-        await connection.OpenAsync(ct);
-        return connection;
-    }
-
-    /// <summary>Verifica una contraseña con el salt guardado y crea una sesión con token aleatorio.</summary>
-    public async Task<SessionDto?> LoginAsync(string username, string password, CancellationToken ct)
-    {
-        await using var db = await Open(ct);
-        await using var cmd = new NpgsqlCommand("SELECT id, nombre, perfil, area, password_hash, password_salt FROM app_users WHERE lower(usuario)=lower(@username) AND activo", db);
-        cmd.Parameters.AddWithValue("username", username.Trim());
-        await using var reader = await cmd.ExecuteReaderAsync(ct);
-        if (!await reader.ReadAsync(ct)) return null;
-        var id = reader.GetInt64(0); var name = reader.GetString(1); var role = reader.GetString(2);
-        var area = reader.IsDBNull(3) ? null : reader.GetString(3);
-        var expected = (byte[])reader[4]; var salt = (byte[])reader[5];
-        var actual = Rfc2898DeriveBytes.Pbkdf2(password, salt, 210_000, HashAlgorithmName.SHA256, 32);
-        if (!CryptographicOperations.FixedTimeEquals(actual, expected)) return null;
-        await reader.DisposeAsync();
-        var token = Convert.ToHexString(RandomNumberGenerator.GetBytes(32));
-        var now = DateTimeOffset.UtcNow;
-        await using var insert = new NpgsqlCommand("INSERT INTO app_sessions(token_hash,user_id,created_at,last_seen_at) VALUES(@hash,@user,@now,@now)", db);
-        insert.Parameters.AddWithValue("hash", Digest(token)); insert.Parameters.AddWithValue("user", id); insert.Parameters.AddWithValue("now", now);
-        await insert.ExecuteNonQueryAsync(ct);
-        return new(token, name, role, area, now.AddMinutes(30));
-    }
-
-    /// <summary>Consulta la cuenta activa y extiende su vencimiento solo si aún no pasaron 30 minutos.</summary>
-    public async Task<SessionDto?> GetSessionAsync(string token, CancellationToken ct)
-    {
-        await using var db = await Open(ct);
-        await using var cmd = new NpgsqlCommand("UPDATE app_sessions s SET last_seen_at=now() FROM app_users u WHERE s.user_id=u.id AND s.token_hash=@hash AND s.last_seen_at > now()-interval '30 minutes' AND u.activo RETURNING u.nombre,u.perfil,u.area,s.last_seen_at+interval '30 minutes'", db);
-        cmd.Parameters.AddWithValue("hash", Digest(token));
-        await using var reader = await cmd.ExecuteReaderAsync(ct);
-        if (!await reader.ReadAsync(ct)) return null;
-        return new(token, reader.GetString(0), reader.GetString(1), reader.IsDBNull(2) ? null : reader.GetString(2), reader.GetFieldValue<DateTimeOffset>(3));
-    }
-
-    public async Task EndSessionAsync(string token, CancellationToken ct)
-    {
-        await using var db = await Open(ct);
-        await using var cmd = new NpgsqlCommand("DELETE FROM app_sessions WHERE token_hash=@hash", db);
-        cmd.Parameters.AddWithValue("hash", Digest(token)); await cmd.ExecuteNonQueryAsync(ct);
-    }
-
-    /// <summary>Valida el reporte y guarda el expediente junto con su primer evento.</summary>
-    public async Task<IncidentDto> CreateAsync(CreateIncidentDto request, CancellationToken ct)
-    {
-        if (string.IsNullOrWhiteSpace(request.Category) || string.IsNullOrWhiteSpace(request.Location) || request.Description.Trim().Length is < 20 or > 2000)
-            throw new ArgumentException("Categoría, ubicación y descripción válida son obligatorias.");
-        await using var db = await Open(ct); await using var tx = await db.BeginTransactionAsync(ct);
-        var code = "UES" + Convert.ToHexString(RandomNumberGenerator.GetBytes(6)); var now = DateTimeOffset.UtcNow;
-        const string insert = "INSERT INTO incidents(code,category,location,description,reference,state,priority,version,created_at) VALUES(@code,@category,@location,@description,@reference,'Recibido',NULL,1,@now)";
-        await using (var cmd = new NpgsqlCommand(insert, db, tx))
-        {
-            cmd.Parameters.AddWithValue("code", code); cmd.Parameters.AddWithValue("category", request.Category.Trim()); cmd.Parameters.AddWithValue("location", request.Location.Trim());
-            cmd.Parameters.AddWithValue("description", request.Description.Trim()); cmd.Parameters.AddWithValue("reference", (object?)request.Reference?.Trim() ?? DBNull.Value); cmd.Parameters.AddWithValue("now", now);
-            await cmd.ExecuteNonQueryAsync(ct);
-        }
-        await AddHistory(db, tx, code, "Recibido", "Reporte registrado. Pendiente de evaluación por la unidad responsable.", null, now, ct);
-        await tx.CommitAsync(ct);
-        return new(code, request.Category.Trim(), request.Location.Trim(), request.Description.Trim(), "Recibido", now, request.Reference, null, null, 1, [new(now, "Recibido", "Reporte registrado. Pendiente de evaluación por la unidad responsable.")]);
-    }
-
-    /// <summary>Proyecta solo los campos aprobados para seguimiento público y no entrega descripción ni identidad.</summary>
-    public async Task<PublicStatusDto?> TrackAsync(string code, CancellationToken ct)
-    {
-        var incident = await Load(code, ct);
-        return incident is null ? null : IncidentContractMapper.ToPublicStatus(incident);
-    }
-
-    public async Task<IReadOnlyList<IncidentDto>> ListAsync(IncidentFilterDto filter, SessionDto session, CancellationToken ct)
-    {
-        IncidentFilterRules.Validate(filter);
-        const string sql = "SELECT code,category,location,description,state,created_at,reference,priority,responsible_unit,version,requester_area FROM incidents WHERE ((@role IN ('Mantenimiento','Desarrollo F�sico') AND coalesce(responsible_unit,CASE WHEN category IN ('Edificios','Espacios comunes') THEN 'Desarrollo F�sico' ELSE 'Mantenimiento' END)=@role) OR (@role IN ('Jefatura','Ordenanza') AND requester_area=@area) OR @role='Autoridad') AND (@query IS NULL OR code ILIKE '%'||@query||'%' OR description ILIKE '%'||@query||'%') AND (@category IS NULL OR category=@category) AND (@location IS NULL OR location=@location) AND (@state IS NULL OR state=@state) AND (@from IS NULL OR created_at >= @from) AND (@to_exclusive IS NULL OR created_at < @to_exclusive) ORDER BY CASE priority WHEN 'Alta' THEN 0 WHEN 'Media' THEN 1 ELSE 2 END,created_at DESC";
-        await using var db = await Open(ct); await using var cmd = new NpgsqlCommand(sql, db);
-        cmd.Parameters.Add("role", NpgsqlTypes.NpgsqlDbType.Text).Value = session.Profile;
-        cmd.Parameters.Add("area", NpgsqlTypes.NpgsqlDbType.Text).Value = (object?)session.Area ?? DBNull.Value;
-        cmd.Parameters.Add("query", NpgsqlTypes.NpgsqlDbType.Text).Value = (object?)filter.Query ?? DBNull.Value;
-        cmd.Parameters.Add("category", NpgsqlTypes.NpgsqlDbType.Text).Value = (object?)filter.Category ?? DBNull.Value;
-        cmd.Parameters.Add("location", NpgsqlTypes.NpgsqlDbType.Text).Value = (object?)filter.Location ?? DBNull.Value;
-        cmd.Parameters.Add("state", NpgsqlTypes.NpgsqlDbType.Text).Value = (object?)filter.State ?? DBNull.Value;
-        cmd.Parameters.Add("from", NpgsqlTypes.NpgsqlDbType.TimestampTz).Value = filter.From is { } from ? IncidentFilterRules.StartOfDay(from) : DBNull.Value;
-        cmd.Parameters.Add("to_exclusive", NpgsqlTypes.NpgsqlDbType.TimestampTz).Value = filter.To is { } to ? IncidentFilterRules.StartOfDay(to.AddDays(1)) : DBNull.Value;
-        var rows = new List<IncidentDto>(); await using var reader = await cmd.ExecuteReaderAsync(ct);
-        while (await reader.ReadAsync(ct)) rows.Add(ReadIncident(reader, []) with { RequesterArea = reader.IsDBNull(10) ? null : reader.GetString(10) });
-        await reader.DisposeAsync();
-        for (var i=0;i<rows.Count;i++) rows[i] = rows[i] with { History = await LoadHistory(db, rows[i].Code, ct) };
-        return rows;
-    }
-    public async Task<IncidentDto?> GetAuthorizedAsync(string code, SessionDto session, CancellationToken ct)
-    {
-        var item = await Load(code, ct);
-        if (item is null) return null;
-        var scope = await GetScope(session.Token, ct);
-        return scope is { } s && IncidentRules.CanEdit(s.Role, s.Area ?? "", item.RequesterArea ?? "", item.ResponsibleUnit ?? "", item.Category, item.State) ? item : null;
-    }
-
-    /// <summary>Bloquea el expediente, valida permiso y versión, y confirma estado e historial en una transacción.</summary>
-    public async Task<IncidentDto> ChangeAsync(string code, ChangeIncidentDto request, SessionDto session, CancellationToken ct)
-    {
-        await using var db = await Open(ct); await using var tx = await db.BeginTransactionAsync(ct);
-        IncidentDto? item;
-        await using (var lockCmd = new NpgsqlCommand("SELECT code,category,location,description,state,created_at,reference,priority,responsible_unit,version,requester_area FROM incidents WHERE code=@code FOR UPDATE", db, tx))
-        {
-            lockCmd.Parameters.AddWithValue("code", code); await using var reader = await lockCmd.ExecuteReaderAsync(ct);
-            if (!await reader.ReadAsync(ct)) throw new KeyNotFoundException("Incidencia inexistente.");
-            item = ReadIncident(reader, [] ) with { RequesterArea = reader.IsDBNull(10) ? null : reader.GetString(10) };
-        }
-        var scope = await GetScope(session.Token, ct, db, tx);
-        if (scope is not { } s || !IncidentRules.CanEdit(s.Role, s.Area ?? "", item.RequesterArea ?? "", item.ResponsibleUnit ?? "", item.Category, item.State))
-            throw new UnauthorizedAccessException();
-        if (request.Version != item.Version) throw new IncidentConflictException("El expediente cambió desde que fue consultado. Recarga y aplica de nuevo.");
-        if (request.State == item.State && request.Priority == item.Priority) throw new ArgumentException("Selecciona un cambio de estado o prioridad.");
-        IncidentRules.ValidateChange(item.State, request.State, request.Priority, request.Note);
-        var nextVersion = item.Version + 1; var now = DateTimeOffset.UtcNow;
-        await using (var update = new NpgsqlCommand("UPDATE incidents SET state=@state,priority=@priority,version=@next,updated_at=@now WHERE code=@code AND version=@version", db, tx))
-        {
-            update.Parameters.AddWithValue("state", request.State); update.Parameters.AddWithValue("priority", request.Priority); update.Parameters.AddWithValue("next", nextVersion);
-            update.Parameters.AddWithValue("now", now); update.Parameters.AddWithValue("code", code); update.Parameters.AddWithValue("version", request.Version);
-            if (await update.ExecuteNonQueryAsync(ct) != 1) throw new IncidentConflictException("El expediente cambió simultáneamente; recarga para continuar.");
-        }
-        await AddHistory(db, tx, code, request.State, request.Note.Trim(), s.UserId, now, ct);
-        await tx.CommitAsync(ct);
-        return (await Load(code, ct))!;
-    }
-
-    // Datos vigentes del usuario y alcance se vuelven a consultar para no confiar en el token como permiso fijo.
-    private async Task<(string Role,string? Area,long UserId)?> GetScope(string token,CancellationToken ct,NpgsqlConnection? existing=null,NpgsqlTransaction? tx=null)
-    {
-        if (existing is not null)
-        {
-            await using var command = new NpgsqlCommand("SELECT u.perfil,u.area,u.id FROM app_sessions s JOIN app_users u ON u.id=s.user_id WHERE s.token_hash=@hash AND s.last_seen_at>now()-interval '30 minutes' AND u.activo",existing,tx);
-            command.Parameters.AddWithValue("hash",Digest(token)); await using var reader=await command.ExecuteReaderAsync(ct);
-            return await reader.ReadAsync(ct) ? (reader.GetString(0),reader.IsDBNull(1)?null:reader.GetString(1),reader.GetInt64(2)) : null;
-        }
         await using var db=await Open(ct);
-        await using var cmd=new NpgsqlCommand("SELECT u.perfil,u.area,u.id FROM app_sessions s JOIN app_users u ON u.id=s.user_id WHERE s.token_hash=@hash AND s.last_seen_at>now()-interval '30 minutes' AND u.activo",db);
-        cmd.Parameters.AddWithValue("hash",Digest(token)); await using var r=await cmd.ExecuteReaderAsync(ct);
-        return await r.ReadAsync(ct)?(r.GetString(0),r.IsDBNull(1)?null:r.GetString(1),r.GetInt64(2)):null;
+        await using var cmd=new NpgsqlCommand("SELECT u.id_usuario,u.u_nombre,r.r_nombre,a.a_nombre,u.u_password FROM usuarios u JOIN rol r USING(id_rol) LEFT JOIN areas a USING(id_area) WHERE lower(u.u_correo)=lower(@name) AND u.u_activo AND r.r_activo",db);
+        cmd.Parameters.AddWithValue("name",username.Trim()); await using var rd=await cmd.ExecuteReaderAsync(ct); if(!await rd.ReadAsync(ct)) return null;
+        var id=rd.GetInt32(0);var name=rd.GetString(1);var role=MapRole(rd.GetString(2));var area=rd.IsDBNull(3)?null:rd.GetString(3);var stored=rd.GetString(4);
+        if(!VerifyPassword(password,stored)) return null; await rd.DisposeAsync();
+        var token=Convert.ToHexString(RandomNumberGenerator.GetBytes(32));var now=DateTimeOffset.UtcNow;
+        await using var ins=new NpgsqlCommand("INSERT INTO rol2_sessions(token_hash,id_usuario,created_at,last_seen_at) VALUES(@hash,@id,@now,@now)",db);
+        ins.Parameters.AddWithValue("hash",Digest(token));ins.Parameters.AddWithValue("id",id);ins.Parameters.AddWithValue("now",now);await ins.ExecuteNonQueryAsync(ct);
+        return new(token,name,role,area,now.AddMinutes(30));
     }
-
-    private static IncidentDto ReadIncident(NpgsqlDataReader r,IReadOnlyList<HistoryDto> history) => new(r.GetString(0),r.GetString(1),r.GetString(2),r.GetString(3),r.GetString(4),r.GetFieldValue<DateTimeOffset>(5),r.IsDBNull(6)?null:r.GetString(6),r.IsDBNull(7)?null:r.GetString(7),r.IsDBNull(8)?null:r.GetString(8),r.GetInt64(9),history);
-    private static async Task AddHistory(NpgsqlConnection db,NpgsqlTransaction tx,string code,string state,string note,long? actor,DateTimeOffset date,CancellationToken ct)
+    private static string MapRole(string r)=>r;
+    private static bool VerifyPassword(string password,string stored)
+    { try { var p=stored.Split('$'); if(p.Length!=4||p[0]!="pbkdf2")return false;int n=int.Parse(p[1]);var salt=Convert.FromBase64String(p[2]);var expected=Convert.FromBase64String(p[3]);var actual=Rfc2898DeriveBytes.Pbkdf2(password,salt,n,HashAlgorithmName.SHA256,expected.Length);return CryptographicOperations.FixedTimeEquals(actual,expected); } catch{return false;} }
+    public async Task<SessionDto?> GetSessionAsync(string token,CancellationToken ct)
+    { await using var db=await Open(ct);await using var cmd=new NpgsqlCommand("UPDATE rol2_sessions s SET last_seen_at=now() FROM usuarios u JOIN rol r USING(id_rol) LEFT JOIN areas a USING(id_area) WHERE s.id_usuario=u.id_usuario AND s.token_hash=@hash AND s.last_seen_at>now()-interval '30 minutes' AND u.u_activo AND r.r_activo RETURNING u.u_nombre,r.r_nombre,a.a_nombre,s.last_seen_at+interval '30 minutes'",db);cmd.Parameters.AddWithValue("hash",Digest(token));await using var rd=await cmd.ExecuteReaderAsync(ct);return await rd.ReadAsync(ct)?new(token,rd.GetString(0),MapRole(rd.GetString(1)),rd.IsDBNull(2)?null:rd.GetString(2),rd.GetFieldValue<DateTimeOffset>(3)):null; }
+    public async Task EndSessionAsync(string token,CancellationToken ct){await using var db=await Open(ct);await using var c=new NpgsqlCommand("DELETE FROM rol2_sessions WHERE token_hash=@h",db);c.Parameters.AddWithValue("h",Digest(token));await c.ExecuteNonQueryAsync(ct);}
+    public async Task<IncidentDto> CreateAsync(CreateIncidentDto q,CancellationToken ct)
     {
-        await using var cmd=new NpgsqlCommand("INSERT INTO incident_history(incident_code,state,note,actor_user_id,created_at) VALUES(@code,@state,@note,@actor,@date)",db,tx);
-        cmd.Parameters.AddWithValue("code",code);cmd.Parameters.AddWithValue("state",state);cmd.Parameters.AddWithValue("note",note);cmd.Parameters.AddWithValue("actor",(object?)actor??DBNull.Value);cmd.Parameters.AddWithValue("date",date);await cmd.ExecuteNonQueryAsync(ct);
+        if(string.IsNullOrWhiteSpace(q.Category)||string.IsNullOrWhiteSpace(q.Location)||q.Description.Trim().Length is <20 or >2000)throw new ArgumentException("Categoría, ubicación y descripción válida son obligatorias.");
+        await using var db=await Open(ct); await using var cmd=new NpgsqlCommand("SELECT c.id_categoria,ub.id_ubicacion, c.id_area FROM categorias c CROSS JOIN ubicaciones ub JOIN edificios e USING(id_edificio) WHERE c.c_activo AND ub.ub_activo AND e.e_activo AND lower(c.c_nombre)=lower(@cat) AND lower(e.e_nombre || ' - ' || ub.ub_nombre)=lower(@loc)",db);cmd.Parameters.AddWithValue("cat",q.Category.Trim());cmd.Parameters.AddWithValue("loc",q.Location.Trim());await using var rd=await cmd.ExecuteReaderAsync(ct);if(!await rd.ReadAsync(ct))throw new ArgumentException("Categoría o ubicación inexistente.");var cat=rd.GetInt32(0);var loc=rd.GetInt32(1);var area=rd.GetInt32(2);await rd.DisposeAsync();
+        await using var tx=await db.BeginTransactionAsync(ct);await using var f=new NpgsqlCommand("SELECT o_codigo FROM fn_registrar_incidencia(NULL,@cat,@loc,@area,@nombre,@vinculo,@desc,'Media','Comunitario')",db,tx);f.Parameters.AddWithValue("cat",cat);f.Parameters.AddWithValue("loc",loc);f.Parameters.AddWithValue("area",area);f.Parameters.Add("nombre",NpgsqlDbType.Varchar).Value=DBNull.Value;f.Parameters.Add("vinculo",NpgsqlDbType.Varchar).Value=DBNull.Value;f.Parameters.AddWithValue("desc",q.Description.Trim());var code=(string)(await f.ExecuteScalarAsync(ct)??throw new InvalidOperationException("No se generó código."));await tx.CommitAsync(ct);return (await Load(code,ct))!;
     }
-    private static async Task<IReadOnlyList<HistoryDto>> LoadHistory(NpgsqlConnection db,string code,CancellationToken ct)
+    public async Task<PublicStatusDto?> TrackAsync(string code,CancellationToken ct){var i=await Load(code,ct);return i is null?null:IncidentContractMapper.ToPublicStatus(i);}
+    public async Task<IReadOnlyList<IncidentDto>> ListAsync(IncidentFilterDto filter,SessionDto session,CancellationToken ct)
     {
-        await using var cmd=new NpgsqlCommand("SELECT created_at,state,note FROM incident_history WHERE incident_code=@code ORDER BY created_at",db);cmd.Parameters.AddWithValue("code",code);
-        var result=new List<HistoryDto>();await using var r=await cmd.ExecuteReaderAsync(ct);while(await r.ReadAsync(ct))result.Add(new(r.GetFieldValue<DateTimeOffset>(0),r.GetString(1),r.GetString(2)));return result;
+        IncidentFilterRules.Validate(filter);var sql=SelectIncident+" WHERE ((@role IN ('Mantenimiento','Desarrollo Físico') AND coalesce(a.a_nombre,CASE WHEN c.c_nombre IN ('Edificios','Espacios comunes') THEN 'Desarrollo Físico' ELSE 'Mantenimiento' END)=@role) OR (@role IN ('Jefatura','Ordenanza') AND i.id_area_solicitante=(SELECT id_area FROM areas WHERE a_nombre=@area)) OR @role='Autoridad') AND (@query IS NULL OR i.i_codigo_seguimiento ILIKE '%'||@query||'%' OR i.i_descripcion ILIKE '%'||@query||'%') AND (@category IS NULL OR c.c_nombre=@category) AND (@location IS NULL OR u.e_nombre || ' - ' || ub.ub_nombre=@location) AND (@state IS NULL OR i.i_estado_actual=@state) AND (@from IS NULL OR i.i_fecha_creacion>=@from) AND (@to IS NULL OR i.i_fecha_creacion<@to) ORDER BY CASE i.i_prioridad WHEN 'Alta' THEN 0 WHEN 'Media' THEN 1 ELSE 2 END,i.i_fecha_creacion DESC";
+        await using var db=await Open(ct);await using var cmd=new NpgsqlCommand(sql,db);BindFilters(cmd,filter,session);var rows=new List<(IncidentDto,int)>();await using(var r=await cmd.ExecuteReaderAsync(ct)){while(await r.ReadAsync(ct))rows.Add((Read(r),r.GetInt32(11)));}for(int x=0;x<rows.Count;x++)rows[x]=(rows[x].Item1 with{History=await LoadHistory(db,rows[x].Item2,ct)},rows[x].Item2);return rows.Select(x=>x.Item1).ToArray();
     }
-    private async Task<IncidentDto?> Load(string code,CancellationToken ct)
+    private static void BindFilters(NpgsqlCommand c,IncidentFilterDto f,SessionDto s){c.Parameters.AddWithValue("role",s.Profile);c.Parameters.Add("area",NpgsqlDbType.Varchar).Value=(object?)s.Area??DBNull.Value;c.Parameters.Add("query",NpgsqlDbType.Text).Value=(object?)f.Query??DBNull.Value;c.Parameters.Add("category",NpgsqlDbType.Varchar).Value=(object?)f.Category??DBNull.Value;c.Parameters.Add("location",NpgsqlDbType.Text).Value=(object?)f.Location??DBNull.Value;c.Parameters.Add("state",NpgsqlDbType.Varchar).Value=(object?)f.State??DBNull.Value;c.Parameters.Add("from",NpgsqlDbType.Timestamp).Value=f.From is{} a?DateTime.SpecifyKind(IncidentFilterRules.StartOfDay(a).UtcDateTime,DateTimeKind.Unspecified):DBNull.Value;c.Parameters.Add("to",NpgsqlDbType.Timestamp).Value=f.To is{} b?DateTime.SpecifyKind(IncidentFilterRules.StartOfDay(b.AddDays(1)).UtcDateTime,DateTimeKind.Unspecified):DBNull.Value;}
+    public async Task<IncidentDto?> GetAuthorizedAsync(string code,SessionDto session,CancellationToken ct){var x=await Load(code,ct);return x is not null&&await Allowed(x,session,ct)?x:null;}
+    private async Task<bool> Allowed(IncidentDto i,SessionDto s,CancellationToken ct){if(i.RequesterArea is null)return s.Profile is "Autoridad";return IncidentRules.CanEdit(s.Profile,s.Area??"",i.RequesterArea,i.ResponsibleUnit??"",i.Category,i.State);}
+    public async Task<IncidentDto> ChangeAsync(string code,ChangeIncidentDto req,SessionDto session,CancellationToken ct)
     {
-        await using var db=await Open(ct);IncidentDto? item;
-        await using(var cmd=new NpgsqlCommand("SELECT code,category,location,description,state,created_at,reference,priority,responsible_unit,version,requester_area FROM incidents WHERE code=@code",db))
-        {cmd.Parameters.AddWithValue("code",code.Trim().ToUpperInvariant());await using var r=await cmd.ExecuteReaderAsync(ct);item=await r.ReadAsync(ct)?ReadIncident(r,[]) with { RequesterArea=r.IsDBNull(10)?null:r.GetString(10) }:null;}
-        return item is null?null:item with{History=await LoadHistory(db,item.Code,ct)};
+        await using var db=await Open(ct);await using var tx=await db.BeginTransactionAsync(ct);IncidentDto? item;int id;
+        await using(var c=new NpgsqlCommand(SelectIncident+" WHERE i.i_codigo_seguimiento=@code FOR UPDATE OF i",db,tx)){c.Parameters.AddWithValue("code",code.Trim().ToUpperInvariant());await using var r=await c.ExecuteReaderAsync(ct);if(!await r.ReadAsync(ct))throw new KeyNotFoundException("Incidencia inexistente.");item=Read(r);id=r.GetInt32(11);}
+        if(!await Allowed(item,session,ct))throw new UnauthorizedAccessException();if(req.Version!=item.Version)throw new IncidentConflictException("El expediente cambió desde que fue consultado. Recarga y aplica de nuevo.");if(req.State==item.State&&req.Priority==item.Priority)throw new ArgumentException("Selecciona un cambio de estado o prioridad.");IncidentRules.ValidateChange(item.State,req.State,req.Priority,req.Note);
+        var user=await UserId(session.Token,db,tx,ct);if(user is null)throw new UnauthorizedAccessException();
+        await using(var actor=new NpgsqlCommand("SELECT set_config('app.id_usuario',@user,TRUE)",db,tx)){actor.Parameters.AddWithValue("user",user.Value.ToString());await actor.ExecuteScalarAsync(ct);}
+        if(req.Priority!=item.Priority){await using var p=new NpgsqlCommand("UPDATE incidencias SET i_prioridad=@p WHERE id_incidencia=@id",db,tx);p.Parameters.AddWithValue("p",req.Priority);p.Parameters.AddWithValue("id",id);await p.ExecuteNonQueryAsync(ct);}
+        if(req.State!=item.State){await using var f=new NpgsqlCommand("SELECT o_resultado FROM fn_cambiar_estado_incidencia(@id,@user,@state,@note)",db,tx);f.Parameters.AddWithValue("id",id);f.Parameters.AddWithValue("user",user.Value);f.Parameters.AddWithValue("state",req.State);f.Parameters.AddWithValue("note",req.Note.Trim());var result=(string?)await f.ExecuteScalarAsync(ct);if(result!="OK")throw new ArgumentException("La función oficial rechazó el cambio: "+result);}
+        if(req.State==item.State){await using var v=new NpgsqlCommand("UPDATE rol2_incident_versions SET version=version+1 WHERE id_incidencia=@id",db,tx);v.Parameters.AddWithValue("id",id);await v.ExecuteNonQueryAsync(ct);}await tx.CommitAsync(ct);return (await Load(code,ct))!;
     }
+    private async Task<int?> UserId(string token,NpgsqlConnection db,NpgsqlTransaction tx,CancellationToken ct){await using var c=new NpgsqlCommand("SELECT u.id_usuario FROM rol2_sessions s JOIN usuarios u USING(id_usuario) WHERE s.token_hash=@h AND s.last_seen_at>now()-interval '30 minutes' AND u.u_activo",db,tx);c.Parameters.AddWithValue("h",Digest(token));var x=await c.ExecuteScalarAsync(ct);return x is null?null:Convert.ToInt32(x);}
+    private static IncidentDto Read(NpgsqlDataReader r)=>new(r.GetString(0),r.GetString(1),r.GetString(2),r.GetString(3),r.GetString(4),new DateTimeOffset(DateTime.SpecifyKind(r.GetDateTime(5),DateTimeKind.Utc)),r.IsDBNull(6)?null:r.GetString(6),r.IsDBNull(7)?null:r.GetString(7),r.IsDBNull(8)?null:r.GetString(8),r.GetInt64(9),[]){RequesterArea=r.IsDBNull(10)?null:r.GetString(10)};
+    private async Task<IncidentDto?> Load(string code,CancellationToken ct){await using var db=await Open(ct);IncidentDto? x;int id;await using(var c=new NpgsqlCommand(SelectIncident+" WHERE i.i_codigo_seguimiento=@c",db)){c.Parameters.AddWithValue("c",code.Trim().ToUpperInvariant());await using var r=await c.ExecuteReaderAsync(ct);if(!await r.ReadAsync(ct))return null;x=Read(r);id=r.GetInt32(11);}return x with{History=await LoadHistory(db,id,ct)};}
+    private static async Task<IReadOnlyList<HistoryDto>> LoadHistory(NpgsqlConnection db,int id,CancellationToken ct){await using var c=new NpgsqlCommand("SELECT he_fecha_hora,he_estado,CASE WHEN he_estado='Recibido' THEN 'Reporte recibido y registrado por el sistema.' ELSE he_observacion END FROM historial_estados WHERE id_incidencia=@id ORDER BY he_fecha_hora,id_historial",db);c.Parameters.AddWithValue("id",id);var list=new List<HistoryDto>();await using var r=await c.ExecuteReaderAsync(ct);while(await r.ReadAsync(ct))list.Add(new(new DateTimeOffset(DateTime.SpecifyKind(r.GetDateTime(0),DateTimeKind.Utc)),r.GetString(1),r.GetString(2)));return list;}
 }

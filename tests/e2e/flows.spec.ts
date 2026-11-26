@@ -55,7 +55,7 @@ test('invitado registra consulta y descarga PDF sin exponer identidad', async ({
   ).toBeVisible();
 });
 
-// Prueba 2: acceso rechazado con contrasena incorrecta o cuenta desactivada
+// Prueba 2: acceso rechazado con contra incorrecta o cuenta desactivada
 test('credenciales incorrectas y cuenta inactiva no acceden', async ({ page }) => {
   for (const [user, password] of [
     ['mauricio.fuentes', 'incorrecta'],
@@ -147,7 +147,7 @@ test('catalogos administrativos alimentan formulario y persisten', async ({ page
   await login(page, 'carlos.menjivar');
   await expect(page).toHaveURL(/admin/);
 
-  // Crear una categoria nueva en la pestana de catalogos
+  // Crear una categoria nueva en la pestaña de catalogos
   await page.locator('#tab-catalogos-btn').click();
   await page.locator('#btn-new-catalog-item').click();
   await page.locator('#catalog-name').fill('Equipamiento de prueba');

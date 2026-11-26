@@ -247,6 +247,48 @@ public sealed class PostgresIncidentStore : IIncidentStore, IAccountStore, ICata
         return i is null ? null : IncidentContractMapper.ToPublicStatus(i);
     }
 
+    ////// Listado público resumido: solo campos no sensibles, máximo 100 filas./////////////////////////////////////////////////////
+    public async Task<IReadOnlyList<PublicIncidentSummaryDto>> ListPublicAsync(string? category, string? state, CancellationToken ct)
+    {
+        await using var db = await Open(ct);
+        await using var cmd = new NpgsqlCommand(
+            @"SELECT i.i_codigo_seguimiento,
+                     c.c_nombre,
+                     e.e_nombre || ' - ' || ub.ub_nombre,
+                     i.i_estado_actual,
+                     i.i_fecha_creacion,
+                     i.i_urgencia,
+                     i.i_fecha_cierre
+              FROM incidencias i
+              JOIN categorias c ON c.id_categoria = i.id_categoria
+              JOIN ubicaciones ub ON ub.id_ubicacion = i.id_ubicacion
+              JOIN edificios e ON e.id_edificio = ub.id_edificio
+              WHERE (@category IS NULL OR c.c_nombre = @category)
+                AND (@state IS NULL OR i.i_estado_actual = @state)
+              ORDER BY i.i_fecha_creacion DESC, i.id_incidencia DESC
+              LIMIT 100", db);
+
+        cmd.Parameters.Add("category", NpgsqlDbType.Varchar).Value =
+            string.IsNullOrWhiteSpace(category) ? DBNull.Value : category.Trim();
+        cmd.Parameters.Add("state", NpgsqlDbType.Varchar).Value =
+            string.IsNullOrWhiteSpace(state) ? DBNull.Value : state.Trim();
+
+        var items = new List<PublicIncidentSummaryDto>();
+        await using var rd = await cmd.ExecuteReaderAsync(ct);
+        while (await rd.ReadAsync(ct))
+        {
+            items.Add(new PublicIncidentSummaryDto(
+                rd.GetString(0),
+                rd.GetString(1),
+                rd.GetString(2),
+                rd.GetString(3),
+                new DateTimeOffset(DateTime.SpecifyKind(rd.GetDateTime(4), DateTimeKind.Utc)),
+                rd.IsDBNull(5) ? null : rd.GetString(5),
+                rd.IsDBNull(6) ? null : new DateTimeOffset(DateTime.SpecifyKind(rd.GetDateTime(6), DateTimeKind.Utc))));
+        }
+        return items;
+    }
+
     public async Task<IReadOnlyList<IncidentDto>> ListAsync(IncidentFilterDto filter, SessionDto session, CancellationToken ct)
     {
         IncidentFilterRules.Validate(filter);

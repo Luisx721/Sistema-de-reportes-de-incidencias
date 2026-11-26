@@ -154,7 +154,8 @@ app.MapGet("/api/incidencias", async (HttpRequest request, IIncidentStore store,
     // Devuelve las incidencias que coinciden con los filtros.
     return Results.Ok(await store.ListAsync(filter, session, ct));
 });
-
+app.MapGet("/api/incidencias/publicas", async (string? category, string? state, IIncidentStore store, CancellationToken ct) =>
+    Results.Ok(await store.ListPublicAsync(category, state, ct)));
 app.MapGet("/api/incidencias/{code}", async (string code, HttpRequest request, IIncidentStore store, CancellationToken ct) =>
 {
     var session = await Current(request, store, ct);

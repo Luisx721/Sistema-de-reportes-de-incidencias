@@ -85,6 +85,15 @@ public sealed record CreateIncidentResultDto(
     string State,
     DateTimeOffset Created);
 
+/// <summary>Resumen público para listados y mapa: sin descripción, identidad ni notas.</summary>
+public sealed record PublicIncidentSummaryDto(
+    string Code,
+    string Category,
+    string Location,
+    string State,
+    DateTimeOffset Created,
+    string? Urgency = null,
+    DateTimeOffset? Closed = null);
 public sealed record IncidentFilterDto(
     string? Query,
     string? Category,
@@ -166,6 +175,7 @@ public interface IIncidentStore
     Task<IncidentDto> CreateAsync(CreateIncidentDto request, CancellationToken ct) => CreateAsync(request, null, ct);
     Task<IncidentCatalogsDto> GetCatalogsAsync(CancellationToken ct);
     Task<PublicStatusDto?> TrackAsync(string code, CancellationToken ct);
+    Task<IReadOnlyList<PublicIncidentSummaryDto>> ListPublicAsync(string? category, string? state, CancellationToken ct);
     Task<IReadOnlyList<IncidentDto>> ListAsync(IncidentFilterDto filter, SessionDto session, CancellationToken ct);
     Task<IncidentDto?> GetAuthorizedAsync(string code, SessionDto session, CancellationToken ct);
     Task<IncidentDto> ChangeAsync(string code, ChangeIncidentDto request, SessionDto session, CancellationToken ct);

@@ -83,6 +83,12 @@ Check(!createJson.Contains("history", StringComparison.OrdinalIgnoreCase) && !cr
 var normalResult = IncidentContractMapper.ToCreateResult(duplicateIncident with { IsDuplicate = false });
 Check(!normalResult.IsDuplicate && normalResult.Message == "Reporte recibido.", "El caso sin duplicado debe seguir funcionando.");
 
+var summaryJson = JsonSerializer.Serialize(new PublicIncidentSummaryDto(
+    "UES001", "Electricidad", "Biblioteca", "En proceso", DateTimeOffset.UtcNow, "Alta", null));
+Check(!summaryJson.Contains("description", StringComparison.OrdinalIgnoreCase)
+   && !summaryJson.Contains("reporter", StringComparison.OrdinalIgnoreCase)
+   && !summaryJson.Contains("history", StringComparison.OrdinalIgnoreCase)
+   && !summaryJson.Contains("priority", StringComparison.OrdinalIgnoreCase), "El resumen publico no debe incluir campos privados.");
 // ==========================================
 // 5. Filtros y Fechas en Zona Horaria de El Salvador
 // ==========================================

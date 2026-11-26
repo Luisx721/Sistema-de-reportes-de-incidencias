@@ -1,5 +1,6 @@
 import { allowedTransitions, canEditReport, visibleReports } from './permissions';
 import { IncidentReport, SessionUser } from '../models/incident.model';
+// Reporte de ejemplo que usan todas las pruebas
 const report: IncidentReport = {
   code: 'TEST0001',
   category: 'Electricidad',
@@ -12,6 +13,7 @@ const report: IncidentReport = {
   requesterArea: 'Biblioteca',
   ownerId: 10,
 };
+// Crea un usuario de prueba con el perfil indicado
 const user = (profile: string): SessionUser => ({
   id: 10,
   name: 'Prueba',
@@ -19,7 +21,9 @@ const user = (profile: string): SessionUser => ({
   demo: true,
   area: 'Biblioteca',
 });
+// Pruebas de las reglas de permisos
 describe('Competencias de demostracion', () => {
+    // Solo Mantenimiento puede atender el reporte
   it('permite la atencion de la unidad y rechaza los demas perfiles', () => {
     expect(canEditReport(user('Mantenimiento'), report)).toBe(true);
     for (const role of [
@@ -32,12 +36,14 @@ describe('Competencias de demostracion', () => {
     ])
       expect(canEditReport(user(role), report)).toBe(false);
   });
+   // Un reporte resuelto o cerrado ya no se puede editar ni cambiar de estado
   it('no permite reabrir expedientes cerrados', () => {
     for (const state of ['Resuelto', 'Rechazado/Cerrado']) {
       expect(allowedTransitions(state)).toEqual([]);
       expect(canEditReport(user('Mantenimiento'), { ...report, state })).toBe(false);
     }
   });
+   // Cada perfil solo ve los reportes que le corresponden
   it('limita la consulta por area e identidad de cuenta', () => {
     expect(
       visibleReports(user('Jefatura'), [report, { ...report, requesterArea: 'Otra' }]),
@@ -45,8 +51,10 @@ describe('Competencias de demostracion', () => {
     expect(visibleReports(user('Reportante'), [report, { ...report, ownerId: 11 }])).toEqual([
       report,
     ]);
+     // Sin sesion no se ve ningun reporte
     expect(visibleReports(null, [report])).toEqual([]);
   });
+  // Estados a los que se puede pasar desde cada estado
   it('mantiene las transiciones conservadoras documentadas', () => {
     expect(allowedTransitions('Recibido')).toEqual(['En proceso', 'Rechazado/Cerrado']);
     expect(allowedTransitions('En espera de materiales/autorización')).toEqual(['En proceso']);

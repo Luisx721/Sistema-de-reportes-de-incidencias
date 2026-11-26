@@ -1,3 +1,8 @@
 <Solution>
   <Project Path="sistema-de-reportes-de-incindencias/sistema-de-reportes-de-incindencias.csproj" />
+  <Project Path="Incidencias.Domain/Incidencias.Domain.csproj" />
+  <Project Path="Incidencias.Application/Incidencias.Application.csproj" />
+  <Project Path="Incidencias.Infrastructure/Incidencias.Infrastructure.csproj" />
+  <Project Path="Incidencias.Api/Incidencias.Api.csproj" />
+  <Project Path="Incidencias.Domain.Tests/Incidencias.Domain.Tests.csproj" />
 </Solution>

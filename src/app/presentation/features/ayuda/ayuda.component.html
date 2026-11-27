@@ -73,11 +73,25 @@
     <!-- Categorías y estados de atención -->
     <aside class="surface guide-aside">
       <p class="eyebrow">QUÉ PUEDES REPORTAR</p>
-      <h2>Problemas de infraestructura</h2>
-      <p>
-        Daños en mobiliario, instalaciones eléctricas, agua y saneamiento, edificios o espacios
-        comunes.
-      </p>
+      <h2>Categorías activas</h2>
+      @if (loading) {
+        <p role="status">Cargando categorías activas…</p>
+      } @else if (error) {
+        <p role="alert">{{ error }}</p>
+      } @else if (activeCategories.length === 0) {
+        <p>No hay categorías activas disponibles en este momento.</p>
+      } @else {
+        <ul>
+          @for (cat of activeCategories; track cat.name) {
+            <li>
+              <strong>{{ cat.name }}</strong>
+              @if (cat.areaName) {
+                <span> · Unidad responsable: {{ cat.areaName }}</span>
+              }
+            </li>
+          }
+        </ul>
+      }
       <hr />
       <h3>¿Qué significa cada estado?</h3>
       <dl class="state-guide">

@@ -83,7 +83,11 @@ public sealed record CreateIncidentResultDto(
     bool IsDuplicate,
     string Message,
     string State,
-    DateTimeOffset Created);
+    DateTimeOffset Created)
+    {
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? PhotoUploadToken { get; init; }
+}
 
 /// <summary>Resumen público para listados y mapa: sin descripción, identidad ni notas.</summary>
 public sealed record PublicIncidentSummaryDto(

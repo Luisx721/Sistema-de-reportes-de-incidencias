@@ -2,6 +2,8 @@
 using Incidencias.Application;
 using Incidencias.Domain;
 using Incidencias.Infrastructure;
+using System.Security.Cryptography;
+using Microsoft.AspNetCore.DataProtection;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -28,8 +30,32 @@ builder.Services.AddCors(options => options.AddDefaultPolicy(policy => policy.Wi
     builder.Configuration.GetSection("Cors:Origins").Get<string[]>() ?? ["http://localhost:4200", "http://127.0.0.1:4200"])
     .AllowAnyHeader().AllowAnyMethod()));
 
+builder.Services.AddDataProtection();
+
 var app = builder.Build();
 app.UseCors();
+
+const string photoUploadHeader = "X-Photo-Upload-Token";
+var photoUploadProtector = app.Services.GetRequiredService<IDataProtectionProvider>()
+    .CreateProtector("Incidencias.GuestPhotoUpload.v1")
+    .ToTimeLimitedDataProtector();
+
+bool CanUploadGuestPhoto(HttpRequest request, string code)
+{
+    if (!request.Headers.TryGetValue(photoUploadHeader, out var values) || values.Count != 1)
+        return false;
+
+    var token = values[0];
+    if (string.IsNullOrWhiteSpace(token)) return false;
+
+    try
+    {
+        var allowedCode = photoUploadProtector.Unprotect(token);
+        return string.Equals(allowedCode, code.Trim(), StringComparison.OrdinalIgnoreCase);
+    }
+    catch (CryptographicException) { return false; }
+    catch (FormatException) { return false; }
+}
 
 // ==========================================
 // Funciones auxiliares de sesión y permisos
@@ -107,8 +133,18 @@ app.MapPost("/api/incidencias", async (CreateIncidentDto request, HttpRequest re
         // Guarda la incidencia y obtiene los datos del reporte creado.
         var created = await store.CreateAsync(request, session, ct);
 
-        // --Devuelve el código de seguimiento y una respuesta sin datos internos.
-        return Results.Created($"/api/seguimiento/{created.Code}", IncidentContractMapper.ToCreateResult(created));
+       var result = IncidentContractMapper.ToCreateResult(created);
+if (session is null && !created.IsDuplicate)
+{
+    req.HttpContext.Response.Headers.CacheControl = "no-store";
+    result = result with
+    {
+        PhotoUploadToken = photoUploadProtector.Protect(
+            created.Code, TimeSpan.FromMinutes(15))
+    };
+}
+
+return Results.Created($"/api/seguimiento/{created.Code}", result);
     }
     catch (ArgumentException ex) { return Results.BadRequest(new { error = ex.Message }); }
     catch (UnauthorizedAccessException) { return Results.StatusCode(StatusCodes.Status403Forbidden); }
@@ -255,7 +291,8 @@ app.MapGet("/api/exportaciones", HandleExportCsv);
 app.MapPost("/api/incidencias/{code}/fotos", async (string code, HttpRequest req, IPhotoStore photoStore, IIncidentStore store, CancellationToken ct) =>
 {
     var session = await Current(req, store, ct);
-    if (session is null) return Results.Unauthorized();
+   if (session is null && !CanUploadGuestPhoto(req, code))
+    return Results.Unauthorized();
 
     if (!req.HasFormContentType)
         return Results.BadRequest(new { error = "La solicitud debe ser multipart/form-data." });

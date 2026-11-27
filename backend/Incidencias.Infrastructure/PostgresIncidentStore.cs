@@ -538,7 +538,7 @@ public sealed class PostgresIncidentStore : IIncidentStore, IAccountStore, ICata
     // Fotografías (IPhotoStore)
     // ==========================================
 
-    public async Task<PhotoDto> AddAsync(string code, PhotoUploadDto upload, SessionDto session, CancellationToken ct)
+    public async Task<PhotoDto> AddAsync(string code, PhotoUploadDto upload, SessionDto? session, CancellationToken ct)
     {
         var extension = PhotoRules.Validate(upload.FileName, upload.Content);
         var dbType = PhotoRules.DatabaseType(extension);

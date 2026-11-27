@@ -9,7 +9,7 @@ public sealed record PhotoFileDto(byte[] Content, string ContentType, string Fil
 /// <summary>Carga y consulta de hasta tres fotos por incidencia, con acceso al expediente (RF-03).</summary>
 public interface IPhotoStore
 {
-    Task<PhotoDto> AddAsync(string code, PhotoUploadDto upload, SessionDto session, CancellationToken ct);
+    Task<PhotoDto> AddAsync(string code, PhotoUploadDto upload, SessionDto? session, CancellationToken ct);
     Task<IReadOnlyList<PhotoDto>> ListAsync(string code, SessionDto session, CancellationToken ct);
     Task<PhotoFileDto?> GetFileAsync(int id, SessionDto session, CancellationToken ct);
 }

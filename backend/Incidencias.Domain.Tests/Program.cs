@@ -95,6 +95,19 @@ Check(!summaryJson.Contains("description", StringComparison.OrdinalIgnoreCase)
    && !summaryJson.Contains("reporter", StringComparison.OrdinalIgnoreCase)
    && !summaryJson.Contains("history", StringComparison.OrdinalIgnoreCase)
    && !summaryJson.Contains("priority", StringComparison.OrdinalIgnoreCase), "El resumen publico no debe incluir campos privados.");
+
+
+// ==========================================
+// 4c. RF-13: panel centralizado y D-01
+// ==========================================
+Check(IncidentRules.CanViewPanel("Mantenimiento") && IncidentRules.CanViewPanel("Desarrollo Físico"), "RF-13: el panel centralizado está disponible para Mantenimiento y Desarrollo Físico.");
+Check(!IncidentRules.CanViewPanel("Jefatura") && !IncidentRules.CanViewPanel("Ordenanza") && !IncidentRules.CanViewPanel("Autoridad") && !IncidentRules.CanViewPanel("Administrador") && !IncidentRules.CanViewPanel("Invitado"), "RF-13: otros perfiles no usan el panel técnico.");
+Check(!IncidentRules.CanEdit("Mantenimiento", "", "Servicios", "Desarrollo Físico", "Edificios", "En proceso")
+      && !IncidentRules.CanEdit("Desarrollo Físico", "", "Servicios", "Mantenimiento", "Electricidad", "Recibido")
+      && IncidentRules.CanEdit("Mantenimiento", "", "Servicios", "Mantenimiento", "Electricidad", "En proceso"),
+      "D-01: ver el panel no concede editar casos de otra unidad; la propia sí puede.");
+var panelSummaryJson = JsonSerializer.Serialize(new IncidentSummaryDto("UES001", DateTimeOffset.UtcNow, "Electricidad", "Biblioteca - Sala", "Alta", "En proceso", "Mantenimiento"));
+Check(!panelSummaryJson.Contains("description", StringComparison.OrdinalIgnoreCase) && !panelSummaryJson.Contains("reporter", StringComparison.OrdinalIgnoreCase) && !panelSummaryJson.Contains("history", StringComparison.OrdinalIgnoreCase), "RF-13: el resumen del panel no incluye descripción, reportante ni historial.");
 // ==========================================
 // 5. Filtros y Fechas en Zona Horaria de El Salvador
 // ==========================================

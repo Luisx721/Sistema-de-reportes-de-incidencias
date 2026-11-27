@@ -100,6 +100,9 @@ public static class IncidentRules
     }
 
     public static bool IsInternalProfile(string role) => InternalProfiles.Contains(role);
+    
+    /// <summary>RF-13: el panel centralizado es del personal técnico; ver el listado no concede edición (D-01).</summary>
+    public static bool CanViewPanel(string role) => role is "Mantenimiento" or "Desarrollo Físico";
 
     /// <summary>RF-05: solo jefaturas y ordenanzas registran en modalidad asistida.</summary>
     public static bool CanCreateAssisted(string role) => role is "Jefatura" or "Ordenanza";

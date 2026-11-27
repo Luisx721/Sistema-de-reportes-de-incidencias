@@ -150,45 +150,56 @@ return Results.Created($"/api/seguimiento/{created.Code}", result);
     catch (UnauthorizedAccessException) { return Results.StatusCode(StatusCodes.Status403Forbidden); }
 });
 
+(IncidentFilterDto? Filter, IResult? Error) ReadFilter(HttpRequest request)
+{
+    DateOnly? from = null, to = null;
+    if (request.Query.TryGetValue("from", out var fromText) && !string.IsNullOrWhiteSpace(fromText))
+    {
+        if (!DateOnly.TryParse(fromText, out var parsedFrom))
+            return (null, Results.BadRequest(new { error = "La fecha inicial no es válida." }));
+        from = parsedFrom;
+    }
+    if (request.Query.TryGetValue("to", out var toText) && !string.IsNullOrWhiteSpace(toText))
+    {
+        if (!DateOnly.TryParse(toText, out var parsedTo))
+            return (null, Results.BadRequest(new { error = "La fecha final no es válida." }));
+        to = parsedTo;
+    }
+    var filter = new IncidentFilterDto(
+        request.Query["query"], request.Query["category"], request.Query["location"],
+        request.Query["state"], from, to, request.Query["urgency"]);
+    try { IncidentFilterRules.Validate(filter); }
+    catch (ArgumentException ex) { return (null, Results.BadRequest(new { error = ex.Message })); }
+    return (filter, null);
+}
+
 // Obtiene el listado de incidencias para los usuarios internos.
 app.MapGet("/api/incidencias", async (HttpRequest request, IIncidentStore store, CancellationToken ct) =>
 {
-    // Comprueba que el usuario tenga una sesión activa.
     var session = await Current(request, store, ct);
     if (session is null) return Results.Unauthorized();
 
     // Verifica que el usuario tenga un perfil autorizado para consultar las incidencias.
     if (!IncidentRules.IsInternalProfile(session.Profile)) return Results.StatusCode(StatusCodes.Status403Forbidden);
 
-    // Prepara los filtros de fecha que se pueden enviar desde la consulta.
-    DateOnly? from = null, to = null;
-    if (request.Query.TryGetValue("from", out var fromText) && !string.IsNullOrWhiteSpace(fromText))
-    {
-        if (!DateOnly.TryParse(fromText, out var parsedFrom)) return Results.BadRequest(new { error = "La fecha inicial no es válida." });
-        from = parsedFrom;
-    }
-    if (request.Query.TryGetValue("to", out var toText) && !string.IsNullOrWhiteSpace(toText))
-    {
-        if (!DateOnly.TryParse(toText, out var parsedTo)) return Results.BadRequest(new { error = "La fecha final no es válida." });
-        to = parsedTo;
-    }
+    var (filter, error) = ReadFilter(request);
+    if (error is not null) return error;
 
-    // Organiza los filtros recibidos para buscar las incidencias.
-    var filter = new IncidentFilterDto(
-        request.Query["query"],
-        request.Query["category"],
-        request.Query["location"],
-        request.Query["state"],
-        from,
-        to,
-        request.Query["urgency"]);
+    return Results.Ok(await store.ListAsync(filter!, session, ct));
+});
 
-    // Comprueba que los filtros tengan valores válidos.
-    try { IncidentFilterRules.Validate(filter); }
-    catch (ArgumentException ex) { return Results.BadRequest(new { error = ex.Message }); }
+// RF-13: panel centralizado de Mantenimiento y Desarrollo Físico (listado general, campos resumidos).
+// Ver el listado no concede abrir ni editar casos ajenos (D-01).
+app.MapGet("/api/incidencias/panel", async (HttpRequest request, IIncidentStore store, CancellationToken ct) =>
+{
+    var session = await Current(request, store, ct);
+    if (session is null) return Results.Unauthorized();
+    if (!IncidentRules.CanViewPanel(session.Profile)) return Results.StatusCode(StatusCodes.Status403Forbidden);
 
-    // Devuelve las incidencias que coinciden con los filtros.
-    return Results.Ok(await store.ListAsync(filter, session, ct));
+    var (filter, error) = ReadFilter(request);
+    if (error is not null) return error;
+
+    return Results.Ok(await store.ListPanelAsync(filter!, session, ct));
 });
 app.MapGet("/api/incidencias/publicas", async (string? category, string? state, IIncidentStore store, CancellationToken ct) =>
     Results.Ok(await store.ListPublicAsync(category, state, ct)));

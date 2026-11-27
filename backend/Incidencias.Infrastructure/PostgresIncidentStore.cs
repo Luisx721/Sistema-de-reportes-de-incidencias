@@ -350,6 +350,48 @@ public sealed class PostgresIncidentStore : IIncidentStore, IAccountStore, ICata
         return rows.Select(x => x.Dto).ToArray();
     }
 
+    // RF-13: panel centralizado. Todas las incidencias, solo campos resumidos.
+    // No concede abrir (Allowed) ni modificar (CanEdit).
+    public async Task<IReadOnlyList<IncidentSummaryDto>> ListPanelAsync(IncidentFilterDto filter, SessionDto session, CancellationToken ct)
+    {
+        if (!IncidentRules.CanViewPanel(session.Profile)) throw new UnauthorizedAccessException();
+        IncidentFilterRules.Validate(filter);
+
+        await using var db = await Open(ct);
+        await using var cmd = new NpgsqlCommand(
+            @"SELECT i_codigo_seguimiento,
+                     i_fecha_creacion,
+                     categoria,
+                     edificio || ' - ' || ubicacion,
+                     i_prioridad,
+                     i_estado_actual,
+                     area_responsable
+              FROM VW_Listado_incidencias
+              WHERE (@query IS NULL OR i_codigo_seguimiento ILIKE '%'||@query||'%')
+                AND (@category IS NULL OR categoria = @category)
+                AND (@location IS NULL OR edificio || ' - ' || ubicacion = @location)
+                AND (@state IS NULL OR i_estado_actual = @state)
+                AND (@urgency IS NULL OR i_urgencia = @urgency)
+                AND (@from IS NULL OR i_fecha_creacion >= @from)
+                AND (@to IS NULL OR i_fecha_creacion < @to)
+              ORDER BY
+                CASE i_prioridad WHEN 'Alta' THEN 0 WHEN 'Media' THEN 1 ELSE 2 END,
+                i_fecha_creacion DESC", db);
+        BindFilters(cmd, filter, session);
+
+        var list = new List<IncidentSummaryDto>();
+        await using var r = await cmd.ExecuteReaderAsync(ct);
+        while (await r.ReadAsync(ct))
+            list.Add(new IncidentSummaryDto(
+                r.GetString(0),
+                new DateTimeOffset(DateTime.SpecifyKind(r.GetDateTime(1), DateTimeKind.Utc)),
+                r.GetString(2),
+                r.GetString(3),
+                r.IsDBNull(4) ? null : r.GetString(4),
+                r.GetString(5),
+                r.IsDBNull(6) ? null : r.GetString(6)));
+        return list;
+    }
     private static void BindFilters(NpgsqlCommand c, IncidentFilterDto f, SessionDto s)
     {
         c.Parameters.AddWithValue("role", s.Profile);

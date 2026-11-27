@@ -107,6 +107,15 @@ public sealed record IncidentFilterDto(
     DateOnly? To,
     string? Urgency = null);
 
+// RF-13: resumen del panel centralizado. Sin descripción, reportante, historial ni notas.
+public sealed record IncidentSummaryDto(
+    string Code,
+    DateTimeOffset Created,
+    string Category,
+    string Location,
+    string? Priority,
+    string State,
+    string? ResponsibleUnit);
 public static class IncidentFilterRules
 {
     private static readonly TimeZoneInfo ElSalvador = TimeZoneInfo.FindSystemTimeZoneById(
@@ -186,6 +195,7 @@ public interface IIncidentStore
     Task<PublicStatusDto?> TrackAsync(string code, CancellationToken ct);
     Task<IReadOnlyList<PublicIncidentSummaryDto>> ListPublicAsync(string? category, string? state, CancellationToken ct);
     Task<IReadOnlyList<IncidentDto>> ListAsync(IncidentFilterDto filter, SessionDto session, CancellationToken ct);
+    Task<IReadOnlyList<IncidentSummaryDto>> ListPanelAsync(IncidentFilterDto filter, SessionDto session, CancellationToken ct);
     Task<IncidentDto?> GetAuthorizedAsync(string code, SessionDto session, CancellationToken ct);
     Task<IncidentDto> ChangeAsync(string code, ChangeIncidentDto request, SessionDto session, CancellationToken ct);
 }

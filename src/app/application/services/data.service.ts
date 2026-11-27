@@ -225,13 +225,14 @@ export class DataService {
 
       // Subir fotografías adjuntas si existen (máx. 3)
       if (report.photos && report.photos.length > 0) {
-        for (const photo of report.photos) {
-          try {
-            await this.api.uploadPhoto(created.code, photo);
-          } catch (photoErr) {
-            // Si una foto falla, el reporte ya quedó creado, solo se avisa en consola
-            console.warn('No se pudo subir una fotografía:', photoErr);
-          }
+        const failedPhotos = await this.uploadReportPhotos(created.code, report.photos);
+        if (failedPhotos.length > 0) {
+          const err: any = new Error(
+            `El reporte ${created.code} se registró, pero no se pudo subir: ${failedPhotos.join(', ')}.`
+          );
+          err.createdCode = created.code;
+          err.failedPhotos = failedPhotos;
+          throw err;
         }
       }
 
@@ -245,6 +246,19 @@ export class DataService {
 
     // Modo demo: guarda en IndexedDB
     return this.repository.transaction('readwrite', (s) => s.add(report));
+  }
+
+  // Permite reintentar la subida de fotos fallidas conservando el código ya creado
+  async uploadReportPhotos(code: string, photos: (Blob | File)[]): Promise<string[]> {
+    const failedNames: string[] = [];
+    for (const photo of photos) {
+      try {
+        await this.api.uploadPhoto(code, photo);
+      } catch {
+        failedNames.push(photo instanceof File ? photo.name : 'fotografía');
+      }
+    }
+    return failedNames;
   }
 
   // La transaccion vuelve a leer el expediente para evitar sobrescribir cambios concurrentes

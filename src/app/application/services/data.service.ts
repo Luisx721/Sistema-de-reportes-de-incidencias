@@ -241,19 +241,44 @@ export class DataService {
         sessionStorage.setItem(`ues-dup-${created.code}`, '1');
       }
 
+      // Subir fotografías adjuntas si existen (máx. 3)
+      if (report.photos && report.photos.length > 0) {
+        const uploadToken = created.photoUploadToken ?? undefined;
+
+        // Si es invitado y el reporte fue marcado como duplicado, el backend no emite token de subida
+        if (!this.auth.user() && !uploadToken && created.isDuplicate) {
+          return created.code;
+        }
+
+        const failedPhotos = await this.uploadReportPhotos(created.code, report.photos, uploadToken);
+        if (failedPhotos.length > 0) {
+          const err: any = new Error(
+            `El reporte ${created.code} se registró, pero no se pudo subir: ${failedPhotos.join(', ')}.`
+          );
+          err.createdCode = created.code;
+          err.failedPhotos = failedPhotos;
+          err.photoUploadToken = uploadToken;
+          throw err;
+        }
+      }
+
       return created.code;
     }
 
     // Modo demo: guarda en IndexedDB
-    return this.repository.transaction('readwrite', (s) => s.add(report));
+    return this.repository.transaction('readwrite', (s) => s.add(report));  //Nose si esto va, alguen que lo revise
   }
 
-  // Permite reintentar la subida de fotos fallidas conservando el código ya creado
-  async uploadReportPhotos(code: string, photos: (Blob | File)[]): Promise<string[]> {
+ // Permite reintentar la subida de fotos fallidas conservando el código y token ya creados
+  async uploadReportPhotos(
+    code: string,
+    photos: (Blob | File)[],
+    uploadToken?: string
+  ): Promise<string[]> {
     const failedNames: string[] = [];
     for (const photo of photos) {
       try {
-        await this.api.uploadPhoto(code, photo);
+        await this.api.uploadPhoto(code, photo, undefined, uploadToken);
       } catch {
         failedNames.push(photo instanceof File ? photo.name : 'fotografía');
       }

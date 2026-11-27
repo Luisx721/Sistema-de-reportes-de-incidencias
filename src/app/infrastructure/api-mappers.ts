@@ -23,6 +23,7 @@ export interface IncidentDto {
   reporterName?: string | null;
   reporterLink?: string | null;
   isDuplicate?: boolean;
+  photoUploadToken?: string | null;
 }
 
 export interface PublicStatusDto {

@@ -51,14 +51,23 @@ export class ApiClient {
     );
   }
 
-  uploadPhoto(code: string, file: File | Blob, fileName?: string): Promise<PhotoDto> {
+  uploadPhoto(
+    code: string,
+    file: File | Blob,
+    fileName?: string,
+    uploadToken?: string
+  ): Promise<PhotoDto> {
     const formData = new FormData();
     formData.append('foto', file, fileName || (file instanceof File ? file.name : 'evidencia.jpg'));
+    const headers = uploadToken
+      ? new HttpHeaders({ 'X-Photo-Upload-Token': uploadToken })
+      : this.headers;
+
     return firstValueFrom(
       this.http.post<PhotoDto>(
         `${this.base}/api/incidencias/${encodeURIComponent(code)}/fotos`,
         formData,
-        { headers: this.headers }
+        { headers }
       )
     );
   }

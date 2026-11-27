@@ -39,6 +39,7 @@ export class ReporteComponent implements OnDestroy, OnInit {
   photoError = '';
   formGeneralError = '';
   createdCodePendingPhotos = '';
+  pendingPhotoUploadToken?: string;
   failedPhotoNames: string[] = [];
   isSubmitting = false;
   catalogsLoading = !this.dataService.demoMode;
@@ -153,6 +154,7 @@ export class ReporteComponent implements OnDestroy, OnInit {
     this.photoError = '';
     this.formGeneralError = '';
     this.createdCodePendingPhotos = '';
+    this.pendingPhotoUploadToken = undefined;
     this.failedPhotoNames = [];
   }
 
@@ -166,7 +168,8 @@ export class ReporteComponent implements OnDestroy, OnInit {
         .map((p) => p.file);
       const stillFailed = await this.dataService.uploadReportPhotos(
         this.createdCodePendingPhotos,
-        filesToRetry.length > 0 ? filesToRetry : this.photos.map((p) => p.file)
+        filesToRetry.length > 0 ? filesToRetry : this.photos.map((p) => p.file),
+        this.pendingPhotoUploadToken
       );
       if (stillFailed.length > 0) {
         this.failedPhotoNames = stillFailed;
@@ -256,6 +259,7 @@ export class ReporteComponent implements OnDestroy, OnInit {
       } catch (err: any) {
         if (err?.createdCode) {
           this.createdCodePendingPhotos = err.createdCode;
+          this.pendingPhotoUploadToken = err.photoUploadToken;
           this.failedPhotoNames = err.failedPhotos ?? [];
           this.formGeneralError = err.message;
           return;

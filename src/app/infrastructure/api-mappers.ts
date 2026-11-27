@@ -36,6 +36,16 @@ export interface PublicStatusDto {
   closed?: string | null;
 }
 
+export interface PublicIncidentSummaryDto {
+  code: string;
+  category: string;
+  location: string;
+  state: string;
+  created: string;
+  urgency: string | null;
+  closed: string | null;
+}
+
 export interface CreateIncidentDto {
   category: string;
   location: string;
@@ -141,6 +151,27 @@ export function fromPublicStatus(dto: PublicStatusDto): IncidentReport & {
     state: dto.state,
     created: dto.created,
     history: dto.history.map((h) => ({ ...h })),
+    photos: [],
+    sample: false,
+    urgency: dto.urgency ?? undefined,
+    closed: dto.closed ?? undefined,
+  };
+}
+
+export function fromPublicIncidentSummary(
+  dto: PublicIncidentSummaryDto,
+  coords?: { lat: number; lng: number }
+): IncidentReport {
+  return {
+    code: dto.code,
+    category: dto.category,
+    location: dto.location,
+    description: '',
+    state: dto.state,
+    created: dto.created,
+    lat: coords?.lat,
+    lng: coords?.lng,
+    history: [],
     photos: [],
     sample: false,
     urgency: dto.urgency ?? undefined,

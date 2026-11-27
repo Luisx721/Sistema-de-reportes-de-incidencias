@@ -6,9 +6,10 @@ import { Injectable, inject } from '@angular/core';
 import { CampusLocation, IncidentReport, IncidentFilters } from '../../domain/models/incident.model';
 import { API_CONFIG } from '../../infrastructure/api-config';
 import { ApiClient } from '../../infrastructure/api-client';
-import { fromIncidentDto, fromPublicStatus, toChangeIncident, toCreateIncident } from '../../infrastructure/api-mappers';
+import { fromIncidentDto, fromPublicIncidentSummary, fromPublicStatus, toChangeIncident, toCreateIncident } from '../../infrastructure/api-mappers';
 import { IncidentCatalogsDto } from '../../infrastructure/api-mappers';
-//Servicio central de datos de incidencias.
+
+// Servicio central de datos de incidencias.
 // Funciona en dos modos: demo (IndexedDB local) y API (backend real).
 @Injectable({
   providedIn: 'root',
@@ -22,7 +23,8 @@ export class DataService {
   private api = inject(ApiClient);
   private config = inject(API_CONFIG);
   get demoMode(): boolean { return this.config.demoMode; }
-   // Categorías base del modo demo
+
+  // Categorías base del modo demo
   private readonly originalCategories: string[] = [
     'Mobiliario',
     'Electricidad',
@@ -30,7 +32,8 @@ export class DataService {
     'Edificios',
     'Espacios comunes',
   ];
-// Ubicaciones del campus con sus coordenadas (x, y para el mapa; lat, lng para GPS)
+
+  // Ubicaciones del campus con sus coordenadas (x, y para el mapa; lat, lng para GPS)
   private readonly originalLocations: CampusLocation[] = [
     { id: 'biblioteca', name: 'Biblioteca', x: 24, y: 27, lat: 13.44115, lng: -88.15905 },
     { id: 'aulas', name: 'Edificio de aulas', x: 68, y: 24, lat: 13.4411, lng: -88.1576 },
@@ -38,6 +41,17 @@ export class DataService {
     { id: 'administracion', name: 'Administración', x: 73, y: 62, lat: 13.44005, lng: -88.1575 },
     { id: 'zonas-comunes', name: 'Áreas comunes', x: 43, y: 79, lat: 13.4396, lng: -88.15835 },
   ];
+
+  private resolveCoordsForLocation(locationText: string): { lat: number; lng: number } {
+    const buildingName = locationText.split(' - ')[0]?.trim().toLowerCase() ?? '';
+    const match = this.originalLocations.find(
+      (loc) =>
+        loc.name.toLowerCase() === buildingName ||
+        locationText.toLowerCase().startsWith(loc.name.toLowerCase())
+    );
+    // Respaldo central del campus (nunca 0, 0)
+    return match ? { lat: match.lat, lng: match.lng } : { lat: 13.44045, lng: -88.15835 };
+  }
 
   // Catalogos activos compartidos con administracion
   get categories(): string[] {
@@ -52,9 +66,24 @@ export class DataService {
     if (!this.config.demoMode) return this.apiCatalogs?.urgencies ?? ['Baja', 'Media', 'Alta'];
     return ['Baja', 'Media', 'Alta'];
   }
-   // En modo API la ubicación solo trae nombre; en demo se combina con las coordenadas originales
+
+  // En modo API la ubicación solo trae nombre; en demo se combina con las coordenadas originales
   get locations(): CampusLocation[] {
-    if (!this.config.demoMode) return (this.apiCatalogs?.locations ?? []).map(name => ({ id: name, name, x: 50, y: 50, lat: 0, lng: 0 }));
+    if (!this.config.demoMode) {
+      return (this.apiCatalogs?.locations ?? []).map((name) => {
+        const coords = this.resolveCoordsForLocation(name);
+        const buildingName = name.split(' - ')[0]?.trim().toLowerCase() ?? '';
+        const orig = this.originalLocations.find((o) => o.name.toLowerCase() === buildingName);
+        return {
+          id: name,
+          name,
+          x: orig?.x ?? 50,
+          y: orig?.y ?? 50,
+          lat: coords.lat,
+          lng: coords.lng,
+        };
+      });
+    }
     return this.admin
       .locations()
       .filter((l) => l.active)
@@ -63,13 +92,14 @@ export class DataService {
           id: 'ubicacion-' + l.id,
           x: 50,
           y: 50,
-          lat: 0,
-          lng: 0,
+          lat: 13.44045,
+          lng: -88.15835,
         }),
         name: l.name,
       }));
   }
-    // Estados posibles de un reporte (el orden se usa también para los estilos de las insignias)
+
+  // Estados posibles de un reporte (el orden se usa también para los estilos de las insignias)
   readonly states: string[] = [
     'Recibido',
     'En proceso',
@@ -77,7 +107,8 @@ export class DataService {
     'Resuelto',
     'Rechazado/Cerrado',
   ];
-// Descarga los catálogos desde la API (no hace nada en modo demo)
+
+  // Descarga los catálogos desde la API (no hace nada en modo demo)
   async loadCatalogs(): Promise<void> {
     if (this.config.demoMode) return;
     const catalogs = await this.api.getCatalogs();
@@ -87,7 +118,8 @@ export class DataService {
       urgencies: catalogs.urgencies ? [...catalogs.urgencies] : ['Baja', 'Media', 'Alta'],
     };
   }
-// Datos de ejemplo: [código, categoría, ubicación, descripción, índice del estado]
+
+  // Datos de ejemplo: [código, categoría, ubicación, descripción, índice del estado]
   private readonly samples: [string, string, string, string, number][] = [
     [
       'UESDEMO0001',
@@ -125,7 +157,8 @@ export class DataService {
       4,
     ],
   ];
-// Consulta pública de un reporte por código; devuelve undefined si no existe
+
+  // Consulta pública de un reporte por código; devuelve undefined si no existe
   async getReport(code: string): Promise<IncidentReport | undefined> {
     if (!this.config.demoMode) {
       try { return fromPublicStatus(await this.api.track(code)); }
@@ -133,12 +166,30 @@ export class DataService {
     }
     return this.repository.transaction<IncidentReport | undefined>('readonly', (s) => s.get(code));
   }
-  // Lista de reportes (con filtros en modo API)
+
+  // Lista pública de reportes (sin login, hasta 100 recientes)
   async getReports(filters: IncidentFilters = {}): Promise<IncidentReport[]> {
-    if (!this.config.demoMode) return (await this.api.listIncidents(filters)).map(fromIncidentDto);
+    if (!this.config.demoMode) {
+      const publicItems = await this.api.listPublicIncidents({
+        category: filters.category,
+        state: filters.state,
+      });
+      return publicItems.map((dto) =>
+        fromPublicIncidentSummary(dto, this.resolveCoordsForLocation(dto.location))
+      );
+    }
     return this.repository.transaction<IncidentReport[]>('readonly', (s) => s.getAll());
   }
-// Consulta completa de un reporte para usuarios con sesión y permisos
+
+  // Lista completa para el panel interno con sesión
+  async getAuthorizedReports(filters: IncidentFilters = {}): Promise<IncidentReport[]> {
+    if (!this.config.demoMode) {
+      return (await this.api.listIncidents(filters)).map(fromIncidentDto);
+    }
+    return this.repository.transaction<IncidentReport[]>('readonly', (s) => s.getAll());
+  }
+
+  // Consulta completa de un reporte individual para usuarios con sesión y permisos
   async getAuthorizedReport(code: string): Promise<IncidentReport> {
     if (this.config.demoMode) {
       const report = await this.getReport(code);
@@ -147,7 +198,8 @@ export class DataService {
     }
     return fromIncidentDto(await this.api.getIncident(code));
   }
- // Valida y guarda un reporte nuevo; devuelve su código o llave
+
+  // Valida y guarda un reporte nuevo; devuelve su código o llave
   async saveReport(report: IncidentReport): Promise<IDBValidKey> {
     // Validaciones: descripción, fotos (máx. 3, png/jpeg, 5 MB) y catálogos activos
     if (report.description.trim().length < 20 || report.description.length > 2000)
@@ -163,7 +215,8 @@ export class DataService {
         !this.locations.some((l) => l.id === report.location))
     )
       throw new Error('Selecciona un catalogo activo');
- //Modo API: crea el reporte y luego sube las fotos
+
+    // Modo API: crea el reporte y luego sube las fotos
     if (!this.config.demoMode) {
       const localLocation = this.locations.find((location) => location.id === report.location);
       if (!localLocation) throw new Error('Selecciona una ubicación válida.');
@@ -176,30 +229,32 @@ export class DataService {
           try {
             await this.api.uploadPhoto(created.code, photo);
           } catch (photoErr) {
-             // Si una foto falla, el reporte ya quedó creado, solo se avisa en consola
+            // Si una foto falla, el reporte ya quedó creado, solo se avisa en consola
             console.warn('No se pudo subir una fotografía:', photoErr);
           }
         }
       }
-  // Marca el reporte como duplicado para avisar al usuario después
+
+      // Marca el reporte como duplicado para avisar al usuario después
       if (created.isDuplicate) {
         sessionStorage.setItem(`ues-dup-${created.code}`, '1');
       }
 
       return created.code;
     }
-// Modo demo: guarda en IndexedDB
+
+    // Modo demo: guarda en IndexedDB
     return this.repository.transaction('readwrite', (s) => s.add(report));
   }
 
   // La transaccion vuelve a leer el expediente para evitar sobrescribir cambios concurrentes
   async updateReport(code: string, state: string, note: string, priority: string, version?: number): Promise<IncidentReport | void> {
     if (!this.config.demoMode) {
-       // Modo API: la versión sirve para detectar cambios hechos por otra persona
+      // Modo API: la versión sirve para detectar cambios hechos por otra persona
       if (version === undefined) throw new Error('El expediente no incluye una versión válida. Recárgalo antes de guardar.');
       return fromIncidentDto(await this.api.changeIncident(code, toChangeIncident(state, priority, note, version)));
     }
-     // Modo demo: actualiza dentro de una transacción de IndexedDB
+    // Modo demo: actualiza dentro de una transacción de IndexedDB
     const user = this.auth.user();
     const db = await this.repository.openDatabase();
     await new Promise<void>((resolve, reject) => {
@@ -210,7 +265,7 @@ export class DataService {
       req.onsuccess = () => {
         const report = req.result as IncidentReport;
         try {
-           // Validaciones de permisos, prioridad, transición de estado y observación
+          // Validaciones de permisos, prioridad, transición de estado y observación
           if (!report || !canEditReport(user, report))
             throw new Error('No tienes competencia sobre este expediente');
           if (!['Baja', 'Media', 'Alta'].includes(priority))
@@ -230,7 +285,7 @@ export class DataService {
             ],
           });
         } catch (error) {
-             // Cancela la transacción y guarda el error para rechazarlo al final
+          // Cancela la transacción y guarda el error para rechazarlo al final
           failure = error as Error;
           tx.abort();
         }
@@ -240,13 +295,14 @@ export class DataService {
       tx.onerror = () => reject(tx.error);
     });
   }
-// Carga los reportes de ejemplo si todavía no existen
+
+  // Carga los reportes de ejemplo si todavía no existen
   async seed(): Promise<void> {
     for (let i = 0; i < this.samples.length; i++) {
       const [code, category, location, description, stateIndex] = this.samples[i];
       const existing = await this.getReport(code);
       if (existing) continue;
-// Historial: siempre inicia en "Recibido" y, si aplica, agrega el estado final
+      // Historial: siempre inicia en "Recibido" y, si aplica, agrega el estado final
       const created = new Date(Date.UTC(2026, 10, 3 + i, 14)).toISOString();
       const history = [
         {
@@ -286,14 +342,15 @@ export class DataService {
           priority: ['Media', 'Alta', 'Baja'][i % 3],
         });
       } catch (error: any) {
-           // ConstraintError significa que el ejemplo ya existe, se ignora
+        // ConstraintError significa que el ejemplo ya existe, se ignora
         if (error?.name !== 'ConstraintError') {
           console.warn('Error al guardar semilla:', error);
         }
       }
     }
   }
-// Devuelve el nombre legible de una ubicación a partir de su id
+
+  // Devuelve el nombre legible de una ubicación a partir de su id
   locationName(id: string): string {
     if (this.locations.some(location => location.name === id)) return id;
     const original = this.originalLocations.find((l) => l.id === id);
@@ -315,6 +372,7 @@ export class DataService {
       return String(date);
     }
   }
+
   // Devuelve la clase CSS de la insignia según el estado
   getBadgeClass(state: string): string {
     const idx = this.states.indexOf(state);

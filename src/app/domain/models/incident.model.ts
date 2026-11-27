@@ -42,6 +42,8 @@ export interface IncidentReport {
   urgency?: string;
   closed?: string;
   isDuplicate?: boolean;
+  lat?: number; 
+  lng?: number;
 }
 // Persona con la sesion iniciada
 export interface SessionUser {

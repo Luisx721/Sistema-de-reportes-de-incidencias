@@ -670,15 +670,34 @@ public sealed class PostgresIncidentStore : IIncidentStore, IAccountStore, ICata
                 byState.Add(new StateStatDto(rd.GetString(0), Convert.ToInt32(rd.GetInt64(1))));
         }
 
-        var byCategory = new List<CategoryStatDto>();
+               var byCategory = new List<CategoryStatDto>();
         await using (var cmd = new NpgsqlCommand(
-            @"SELECT categoria, total, recibido, en_proceso, en_espera, resuelto, rechazado_cerrado,
-                     pct_recibido, pct_en_proceso, pct_en_espera, pct_resuelto, pct_rechazado_cerrado
-              FROM VW_Reporte_Estadistico_Categorias
-              WHERE (@role IN ('Autoridad', 'Administrador') OR area_responsable = @role)
-              ORDER BY categoria", db))
+            @"SELECT c.c_nombre,
+                     COUNT(i.id_incidencia),
+                     COUNT(i.id_incidencia) FILTER (WHERE i.i_estado_actual = 'Recibido'),
+                     COUNT(i.id_incidencia) FILTER (WHERE i.i_estado_actual = 'En proceso'),
+                     COUNT(i.id_incidencia) FILTER (WHERE i.i_estado_actual = 'En espera de materiales/autorización'),
+                     COUNT(i.id_incidencia) FILTER (WHERE i.i_estado_actual = 'Resuelto'),
+                     COUNT(i.id_incidencia) FILTER (WHERE i.i_estado_actual = 'Rechazado/Cerrado'),
+                     COALESCE(ROUND(100.0 * COUNT(i.id_incidencia) FILTER (WHERE i.i_estado_actual = 'Recibido') / NULLIF(COUNT(i.id_incidencia), 0), 2), 0),
+                     COALESCE(ROUND(100.0 * COUNT(i.id_incidencia) FILTER (WHERE i.i_estado_actual = 'En proceso') / NULLIF(COUNT(i.id_incidencia), 0), 2), 0),
+                     COALESCE(ROUND(100.0 * COUNT(i.id_incidencia) FILTER (WHERE i.i_estado_actual = 'En espera de materiales/autorización') / NULLIF(COUNT(i.id_incidencia), 0), 2), 0),
+                     COALESCE(ROUND(100.0 * COUNT(i.id_incidencia) FILTER (WHERE i.i_estado_actual = 'Resuelto') / NULLIF(COUNT(i.id_incidencia), 0), 2), 0),
+                     COALESCE(ROUND(100.0 * COUNT(i.id_incidencia) FILTER (WHERE i.i_estado_actual = 'Rechazado/Cerrado') / NULLIF(COUNT(i.id_incidencia), 0), 2), 0)
+              FROM categorias c
+              JOIN areas ar ON ar.id_area = c.id_area
+              LEFT JOIN incidencias i
+                     ON i.id_categoria = c.id_categoria
+                    AND (@from IS NULL OR i.i_fecha_creacion >= @from)
+                    AND (@to IS NULL OR i.i_fecha_creacion < @to)
+                    AND (@role NOT IN ('Jefatura','Ordenanza')
+                         OR i.id_area_solicitante = (SELECT id_area FROM areas WHERE a_nombre = @area LIMIT 1))
+              WHERE (@role IN ('Autoridad', 'Administrador', 'Jefatura', 'Ordenanza')
+                     OR ar.a_nombre = @role)
+              GROUP BY c.id_categoria, c.c_nombre
+              ORDER BY c.c_nombre", db))
         {
-            cmd.Parameters.AddWithValue("role", session.Profile);
+            BindFilters(cmd, filter, session);
             await using var rd = await cmd.ExecuteReaderAsync(ct);
             while (await rd.ReadAsync(ct))
             {

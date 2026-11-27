@@ -25,12 +25,9 @@ export class HomeComponent implements OnInit {
   async ngOnInit(): Promise<void> {
     try {
       try {
-        if (!this.dataService.demoMode) {
-          this.error = true;
-          this.errorMessage = 'La API Rol 2 todavía no ofrece un listado público de incidencias.';
-          return;
+        if (this.dataService.demoMode) {
+          await this.dataService.seed();
         }
-        await this.dataService.seed();
         const all = await this.dataService.getReports();
         all.sort((a, b) => b.created.localeCompare(a.created));
         this.recentReports = all.slice(0, 3);

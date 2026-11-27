@@ -34,7 +34,7 @@ export class IncidenciasComponent implements OnInit, AfterViewInit, OnDestroy {
   get listingNotice(): string {
     return this.dataService.demoMode
       ? 'Explora ejemplos y reportes guardados en este navegador. Esta vista no representa información real de la universidad.'
-      : 'La API Rol 2 no expone un listado público de incidencias. Usa el código de seguimiento para consultar un expediente.';
+      : 'Consulta las incidencias recientes reportadas en el campus. Por privacidad, no se muestran descripciones ni datos personales.';
   }
   dataService = inject(DataService);
   private route = inject(ActivatedRoute);
@@ -71,12 +71,9 @@ export class IncidenciasComponent implements OnInit, AfterViewInit, OnDestroy {
           try { await this.dataService.loadCatalogs(); }
           catch { this.catalogsError = 'No se pudieron cargar los catálogos desde la API.'; }
           finally { this.catalogsLoading = false; }
+        } else {
+          await this.dataService.seed();
         }
-        if (!this.dataService.demoMode) {
-          this.loadError = 'La API Rol 2 no expone un listado público. Consulta el expediente con su código de seguimiento.';
-          return;
-        }
-        await this.dataService.seed();
         const reports = await this.dataService.getReports();
         reports.sort((a, b) => b.created.localeCompare(a.created));
         this.allReports = reports;
@@ -143,7 +140,10 @@ export class IncidenciasComponent implements OnInit, AfterViewInit, OnDestroy {
   private applyFilters(): void {
     this.filteredReports = this.allReports.filter((r) => {
       const matchCat = !this.selectedCategory || r.category === this.selectedCategory;
-      const matchLoc = !this.selectedLocationId || r.location === this.selectedLocationId;
+      const matchLoc =
+        !this.selectedLocationId ||
+        r.location === this.selectedLocationId ||
+        r.location.startsWith(this.selectedLocationId + ' - ');
       const matchStatus = !this.selectedStatus || r.state === this.selectedStatus;
       return matchCat && matchLoc && matchStatus;
     });

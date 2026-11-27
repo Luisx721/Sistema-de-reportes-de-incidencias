@@ -8,6 +8,7 @@ import {
   IncidentCatalogsDto,
   IncidentDto,
   PhotoDto,
+  PublicIncidentSummaryDto,
   PublicStatusDto,
   SessionDto,
 } from './api-mappers';
@@ -78,6 +79,22 @@ export class ApiClient {
   track(code: string): Promise<PublicStatusDto> {
     return firstValueFrom(
       this.http.get<PublicStatusDto>(`${this.base}/api/seguimiento/${encodeURIComponent(code)}`)
+    );
+  }
+
+  listPublicIncidents(
+    filters: {
+      category?: string;
+      state?: string;
+    } = {}
+  ): Promise<PublicIncidentSummaryDto[]> {
+    const params = Object.fromEntries(
+      Object.entries(filters).filter(([, value]) => !!value?.trim())
+    ) as Record<string, string>;
+    return firstValueFrom(
+      this.http.get<PublicIncidentSummaryDto[]>(`${this.base}/api/incidencias/publicas`, {
+        params,
+      })
     );
   }
 

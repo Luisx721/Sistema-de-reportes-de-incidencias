@@ -38,6 +38,8 @@ export class ReporteComponent implements OnDestroy, OnInit {
   photos: PhotoItem[] = [];
   photoError = '';
   formGeneralError = '';
+  createdCodePendingPhotos = '';
+  failedPhotoNames: string[] = [];
   isSubmitting = false;
   catalogsLoading = !this.dataService.demoMode;
   catalogsError = '';
@@ -150,6 +152,35 @@ export class ReporteComponent implements OnDestroy, OnInit {
     this.errors = {};
     this.photoError = '';
     this.formGeneralError = '';
+    this.createdCodePendingPhotos = '';
+    this.failedPhotoNames = [];
+  }
+
+  async retryPendingPhotos(): Promise<void> {
+    if (!this.createdCodePendingPhotos || this.isSubmitting) return;
+    this.isSubmitting = true;
+    this.formGeneralError = '';
+    try {
+      const filesToRetry = this.photos
+        .filter((p) => this.failedPhotoNames.includes(p.file.name))
+        .map((p) => p.file);
+      const stillFailed = await this.dataService.uploadReportPhotos(
+        this.createdCodePendingPhotos,
+        filesToRetry.length > 0 ? filesToRetry : this.photos.map((p) => p.file)
+      );
+      if (stillFailed.length > 0) {
+        this.failedPhotoNames = stillFailed;
+        this.formGeneralError = `El reporte ${this.createdCodePendingPhotos} ya está guardado, pero sigue fallando la subida de: ${stillFailed.join(', ')}.`;
+      } else {
+        const code = this.createdCodePendingPhotos;
+        this.createdCodePendingPhotos = '';
+        this.failedPhotoNames = [];
+        this.router.navigate(['/confirmacion'], { queryParams: { codigo: code } });
+      }
+    } finally {
+      this.isSubmitting = false;
+      this.changeDetector.markForCheck();
+    }
   }
 
   async submitReport(): Promise<void> {
@@ -222,8 +253,14 @@ export class ReporteComponent implements OnDestroy, OnInit {
 
         const code = await this.dataService.saveReport(record) as string;
         this.router.navigate(['/confirmacion'], { queryParams: { codigo: code } });
-      } catch (err) {
-        const status = (err as any)?.status;
+      } catch (err: any) {
+        if (err?.createdCode) {
+          this.createdCodePendingPhotos = err.createdCode;
+          this.failedPhotoNames = err.failedPhotos ?? [];
+          this.formGeneralError = err.message;
+          return;
+        }
+        const status = err?.status;
         this.formGeneralError = status === 400
           ? 'La API rechazó algunos datos del reporte (400). Revísalos e intenta de nuevo.'
           : status === 409

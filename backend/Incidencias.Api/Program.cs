@@ -327,17 +327,22 @@ app.MapGet("/api/incidencias/{code}/fotos", async (string code, HttpRequest req,
 {
     var session = await Current(req, store, ct);
     if (session is null) return Results.Unauthorized();
-    return Results.Ok(await photoStore.ListAsync(code, session, ct));
+       try { return Results.Ok(await photoStore.ListAsync(code, session, ct)); }
+    catch (UnauthorizedAccessException) { return Results.StatusCode(StatusCodes.Status403Forbidden); }
 });
 
 app.MapGet("/api/fotos/{id:int}", async (int id, HttpRequest req, IPhotoStore photoStore, IIncidentStore store, CancellationToken ct) =>
 {
     var session = await Current(req, store, ct);
     if (session is null) return Results.Unauthorized();
-    var photo = await photoStore.GetFileAsync(id, session, ct);
-    return photo is not null
-        ? Results.File(photo.Content, photo.ContentType, photo.FileName)
-        : Results.NotFound(new { error = "Foto no encontrada." });
+    try
+    {
+        var photo = await photoStore.GetFileAsync(id, session, ct);
+        return photo is not null
+            ? Results.File(photo.Content, photo.ContentType, photo.FileName)
+            : Results.NotFound(new { error = "Foto no encontrada." });
+    }
+    catch (UnauthorizedAccessException) { return Results.StatusCode(StatusCodes.Status403Forbidden); }
 });
 
 // ==========================================

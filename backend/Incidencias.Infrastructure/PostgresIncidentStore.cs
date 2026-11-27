@@ -540,6 +540,8 @@ public sealed class PostgresIncidentStore : IIncidentStore, IAccountStore, ICata
 
     public async Task<PhotoDto> AddAsync(string code, PhotoUploadDto upload, SessionDto? session, CancellationToken ct)
     {
+          if (session is not null && await GetAuthorizedAsync(code, session, ct) is null)
+            throw new UnauthorizedAccessException();
         var extension = PhotoRules.Validate(upload.FileName, upload.Content);
         var dbType = PhotoRules.DatabaseType(extension);
 
@@ -604,6 +606,9 @@ public sealed class PostgresIncidentStore : IIncidentStore, IAccountStore, ICata
 
     public async Task<IReadOnlyList<PhotoDto>> ListAsync(string code, SessionDto session, CancellationToken ct)
     {
+        if (await GetAuthorizedAsync(code, session, ct) is null)
+    throw new UnauthorizedAccessException();
+
         await using var db = await Open(ct);
         await using var c = new NpgsqlCommand(
             @"SELECT f.id_foto, f.f_orden, f.f_tipo, f.f_tamano_bytes
@@ -623,11 +628,14 @@ public sealed class PostgresIncidentStore : IIncidentStore, IAccountStore, ICata
         return list;
     }
 
-    public async Task<PhotoFileDto?> GetFileAsync(int id, SessionDto session, CancellationToken ct)
+     public async Task<PhotoFileDto?> GetFileAsync(int id, SessionDto session, CancellationToken ct)
     {
         await using var db = await Open(ct);
         await using var c = new NpgsqlCommand(
-            "SELECT f.f_archivo, f.f_tipo FROM fotografias f WHERE f.id_foto = @id", db);
+            @"SELECT f.f_archivo, f.f_tipo, i.i_codigo_seguimiento
+              FROM fotografias f
+              JOIN incidencias i USING(id_incidencia)
+              WHERE f.id_foto = @id", db);
         c.Parameters.AddWithValue("id", id);
 
         await using var rd = await c.ExecuteReaderAsync(ct);
@@ -635,7 +643,11 @@ public sealed class PostgresIncidentStore : IIncidentStore, IAccountStore, ICata
 
         var fileName = rd.GetString(0);
         var type = rd.GetString(1);
+        var code = rd.GetString(2);
         await rd.DisposeAsync();
+
+        if (await GetAuthorizedAsync(code, session, ct) is null)
+            throw new UnauthorizedAccessException();
 
         var content = await _photoStorage.ReadAsync(fileName, ct);
         if (content is null) return null;

@@ -48,15 +48,21 @@ Rejects(() => IncidentRules.NormalizeReporterLink("Infiltrado"), "Vínculo invá
 // ==========================================
 // Garantiza que PublicStatusDto oculte identidad, notas internas, detalle y referencia al consultar por código.
 var privateNote = "Reporte recibido por Luis Pérez, teléfono 7777-1234.";
+var technicalNote = "Se reemplazó la luminaria del pasillo.";
 var publicStatus = IncidentContractMapper.ToPublicStatus(new IncidentDto(
     "UES001", "Electricidad", "Biblioteca", "Detalle privado", "En proceso",
     DateTimeOffset.UtcNow, "Referencia reservada", "Alta", "Mantenimiento", 2,
-    [new(DateTimeOffset.UtcNow, "Recibido", privateNote), new(DateTimeOffset.UtcNow, "En proceso", privateNote)],
+    [new(DateTimeOffset.UtcNow, "Recibido", privateNote),
+     new(DateTimeOffset.UtcNow, "En proceso", technicalNote),
+     new(DateTimeOffset.UtcNow, "Resuelto", "   ")],
     Urgency: "Alta", Closed: null, ReporterName: "Luis Pérez", ReporterLink: "Estudiante"));
 
 var json = JsonSerializer.Serialize(publicStatus);
 Check(!json.Contains("reporter", StringComparison.OrdinalIgnoreCase) && !json.Contains("ownerId", StringComparison.OrdinalIgnoreCase), "Seguimiento no debe incluir identidad.");
-Check(!json.Contains("Luis Pérez") && !json.Contains("7777-1234") && !json.Contains("Detalle privado") && !json.Contains("Referencia reservada"), "Seguimiento no debe incluir notas libres ni campos privados.");
+Check(!json.Contains("Luis") && !json.Contains("7777-1234") && !json.Contains("Detalle privado") && !json.Contains("Referencia reservada"), "Seguimiento no debe incluir identidad, descripción, referencia ni la nota del estado Recibido.");
+Check(publicStatus.History[0].Note == "Reporte recibido.", "El estado Recibido usa mensaje fijo y no la nota original.");
+Check(publicStatus.History[1].Note == technicalNote, "RF-10: el seguimiento público muestra la observación técnica del cambio de estado.");
+Check(publicStatus.History[2].Note == "Estado actualizado a Resuelto.", "Una observación en blanco cae en el mensaje genérico.");
 Check(typeof(IIncidentStore).GetMethod(nameof(IIncidentStore.TrackAsync)) is not null, "Seguimiento público no depende de una sesión.");
 
 // ==========================================

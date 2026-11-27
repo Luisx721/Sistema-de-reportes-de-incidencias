@@ -146,12 +146,17 @@ public static class IncidentContractMapper
         incident.State,
         incident.Created,
 
-        // Recorre el historial y genera mensajes seguros,
-        // sin mostrar las observaciones originales.
-        incident.History.Select(item => new HistoryDto(
-            item.Date,
-            item.State,
-            item.State == "Recibido" ? "Reporte recibido." : $"Estado actualizado a {item.State}.")).ToArray(),
+    // Historial público (RF-10): "Recibido" conserva un mensaje fijo; en los demás
+    // estados se muestra la observación técnica del cambio. Si viene vacía se usa
+    // un mensaje genérico. No incluye usuario encargado ni datos del reportante.
+    incident.History.Select(item => new HistoryDto(
+        item.Date,
+        item.State,
+        item.State == "Recibido"
+            ? "Reporte recibido."
+            : string.IsNullOrWhiteSpace(item.Note)
+                ? $"Estado actualizado a {item.State}."
+                : item.Note.Trim())).ToArray(),
         incident.Urgency,
         incident.Closed);
 

@@ -86,8 +86,8 @@
   <!-- Cantidad de resultados -->
   <div class="results-meta">
     <p id="result-count" role="status">
-      {{ filteredReports.length }} incidencia{{ filteredReports.length === 1 ? '' : 's' }} · datos
-      de demostración
+      {{ filteredReports.length }} incidencia{{ filteredReports.length === 1 ? '' : 's' }} ·
+      {{ dataService.demoMode ? 'datos de demostración' : 'reportes públicos del campus' }}
     </p>
     <button class="text-button" id="clear-filters" type="button" (click)="clearFilters()">
       Limpiar filtros

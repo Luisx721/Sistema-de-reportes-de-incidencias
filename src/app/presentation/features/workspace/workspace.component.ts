@@ -180,7 +180,7 @@ export class WorkspaceComponent implements OnInit, OnDestroy {
       if (showLoading) this.loading = true;
       try {
         if (this.data.demoMode) await this.data.seed();
-        const reports = await this.data.getReports({
+        const reports = await this.data.getAuthorizedReports({
           query: this.query.trim() || undefined,
           category: this.category || undefined,
           location: this.location ? this.data.locationName(this.location) : undefined,

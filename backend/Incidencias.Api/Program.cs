@@ -32,8 +32,17 @@ builder.Services.AddCors(options => options.AddDefaultPolicy(policy => policy.Wi
 
 builder.Services.AddDataProtection();
 
+// Registrar los servicios necesarios para generar la documentación OpenAPI de la API.
+builder.Services.AddOpenApi();
+
 var app = builder.Build();
 app.UseCors();
+
+// Exponer la documentación OpenAPI únicamente en el entorno de desarrollo.
+if (app.Environment.IsDevelopment())
+{
+    app.MapOpenApi();
+}
 
 const string photoUploadHeader = "X-Photo-Upload-Token";
 var photoUploadProtector = app.Services.GetRequiredService<IDataProtectionProvider>()

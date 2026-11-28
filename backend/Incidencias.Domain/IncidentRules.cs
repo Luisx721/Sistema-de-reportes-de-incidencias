@@ -58,8 +58,10 @@ public static class IncidentRules
         if (state is "Resuelto" or "Rechazado/Cerrado") return false;
         // Administrador y Autoridad tienen acceso de solo lectura.
         if (role is "Administrador" or "Autoridad") return false;
-        // D-01 (pendiente): por ahora Jefatura y Ordenanza editan solo reportes de su propia área.
-        if (role is "Jefatura" or "Ordenanza") return area.Length > 0 && area == requesterArea;
+
+        // D-01: Jefatura y Ordenanza son de solo consulta (RF-11); no editan estado ni prioridad. Solo editan Mantenimiento
+        // y Desarrollo Físico, y únicamente los casos de su unidad.
+        
         // Enrutamiento provisional por categoría, mientras se cierran los catálogos institucionales.
         var unit = responsibleUnit.Length > 0 ? responsibleUnit :
             category is "Edificios" or "Espacios comunes" ? "Desarrollo Físico" : "Mantenimiento";

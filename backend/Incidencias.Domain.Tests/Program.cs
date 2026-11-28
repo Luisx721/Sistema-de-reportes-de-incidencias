@@ -21,8 +21,9 @@ void Rejects(Action action, string message) { checks++; try { action(); } catch 
 Check(IncidentRules.CanEdit("Mantenimiento", "", "", "", "Electricidad", "Recibido"), "El técnico competente debe poder editar.");
 Check(!IncidentRules.CanEdit("Administrador", "", "", "", "Electricidad", "Recibido"), "Administrador no debe obtener competencia técnica universal.");
 Check(!IncidentRules.CanEdit("Mantenimiento", "", "", "", "Electricidad", "Resuelto"), "Un expediente final no se debe poder editar.");
-// D-01 (pendiente): Jefatura edita solo reportes de su propia área.
-Check(IncidentRules.CanEdit("Jefatura", "Servicios Generales", "Servicios Generales", "", "Mobiliario", "Recibido"), "Jefatura debe ver su área.");
+// D-01: Jefatura y Ordenanza son de solo consulta; no editan ni siquiera los casos de su propia área.
+Check(!IncidentRules.CanEdit("Jefatura", "Servicios Generales", "Servicios Generales", "", "Mobiliario", "Recibido"), "D-01: Jefatura no debe editar ni en su propia área.");
+Check(!IncidentRules.CanEdit("Ordenanza", "Servicios Generales", "Servicios Generales", "", "Mobiliario", "Recibido"), "D-01: Ordenanza no debe editar ni en su propia área.");
 Check(!IncidentRules.CanEdit("Jefatura", "Servicios Generales", "Otra área", "", "Mobiliario", "Recibido"), "Jefatura no debe ver otra área.");
 Check(IncidentRules.CanCreateAssisted("Jefatura") && IncidentRules.CanCreateAssisted("Ordenanza"), "Jefatura y Ordenanza pueden registrar asistido.");
 Check(!IncidentRules.CanCreateAssisted("Autoridad") && !IncidentRules.CanCreateAssisted("Estudiante"), "Otros roles no registran asistido.");

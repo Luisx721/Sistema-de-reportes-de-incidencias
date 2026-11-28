@@ -6,7 +6,7 @@ import { Injectable, inject } from '@angular/core';
 import { CampusLocation, IncidentReport, IncidentFilters } from '../../domain/models/incident.model';
 import { API_CONFIG } from '../../infrastructure/api-config';
 import { ApiClient } from '../../infrastructure/api-client';
-import { fromIncidentDto, fromPublicIncidentSummary, fromPublicStatus, toChangeIncident, toCreateIncident } from '../../infrastructure/api-mappers';
+import { fromIncidentDto, fromIncidentSummary, fromPublicIncidentSummary, fromPublicStatus, toChangeIncident, toCreateIncident } from '../../infrastructure/api-mappers';
 import { IncidentCatalogsDto } from '../../infrastructure/api-mappers';
 
 // Servicio central de datos de incidencias.
@@ -182,16 +182,19 @@ export class DataService {
   }
 
   // Lista completa para el panel interno con sesión
-  async getAuthorizedReports(filters: IncidentFilters = {}): Promise<IncidentReport[]> {
-    if (!this.config.demoMode) {
-      const profile = this.auth.user()?.profile || '';
-      const isGlobalPanel = ['Autoridad', 'Desarrollo Físico'].includes(profile);
-      const dtos = isGlobalPanel
-        ? await this.api.listPanelIncidents(filters)
-        : await this.api.listIncidents(filters);
-      return dtos.map(fromIncidentDto);
+   async getAuthorizedReports(filters: IncidentFilters = {}): Promise<IncidentReport[]> {
+    if (this.config.demoMode) {
+      return this.repository.transaction<IncidentReport[]>('readonly', (s) => s.getAll());
     }
-    return this.repository.transaction<IncidentReport[]>('readonly', (s) => s.getAll());
+
+    const profile = this.auth.user()?.profile;
+    if (profile === 'Mantenimiento' || profile === 'Desarrollo Físico') {
+      const summaries = await this.api.listPanelIncidents(filters);
+      return summaries.map(fromIncidentSummary);
+    }
+
+    const incidents = await this.api.listIncidents(filters);
+    return incidents.map(fromIncidentDto);
   }
 
   // Consulta completa de un reporte individual para usuarios con sesión y permisos

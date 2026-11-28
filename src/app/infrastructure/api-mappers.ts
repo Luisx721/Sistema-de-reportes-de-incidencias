@@ -179,3 +179,27 @@ export function fromPublicIncidentSummary(
     closed: dto.closed ?? undefined,
   };
 }
+export interface IncidentSummaryDto {
+  code: string;
+  created: string;
+  category: string;
+  location: string;
+  priority: string | null;
+  state: string;
+  responsibleUnit: string | null;
+}
+
+export function fromIncidentSummary(dto: IncidentSummaryDto): IncidentReport {
+  return {
+    code: dto.code,
+    created: dto.created,
+    category: dto.category,
+    location: dto.location,
+    priority: dto.priority ?? undefined,
+    state: dto.state,
+    responsibleUnit: dto.responsibleUnit ?? undefined,
+    description: '',
+    history: [],
+    photos: [],
+  };
+}

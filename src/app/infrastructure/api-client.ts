@@ -8,6 +8,7 @@ import {
   CreateIncidentDto,
   IncidentCatalogsDto,
   IncidentDto,
+  IncidentSummaryDto,
   PhotoDto,
   PublicIncidentSummaryDto,
   PublicStatusDto,
@@ -122,12 +123,13 @@ export class ApiClient {
     );
   }
 
-  listPanelIncidents(filters: IncidentFilters = {}): Promise<IncidentDto[]> {
+    listPanelIncidents(filters: IncidentFilters = {}): Promise<IncidentSummaryDto[]> {
     const params = Object.fromEntries(
       Object.entries(filters).filter(([, value]) => !!value)
     ) as Record<string, string>;
+
     return firstValueFrom(
-      this.http.get<IncidentDto[]>(`${this.base}/api/incidencias/panel`, {
+      this.http.get<IncidentSummaryDto[]>(`${this.base}/api/incidencias/panel`, {
         headers: this.headers,
         params,
       })

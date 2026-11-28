@@ -184,7 +184,12 @@ export class DataService {
   // Lista completa para el panel interno con sesión
   async getAuthorizedReports(filters: IncidentFilters = {}): Promise<IncidentReport[]> {
     if (!this.config.demoMode) {
-      return (await this.api.listIncidents(filters)).map(fromIncidentDto);
+      const profile = this.auth.user()?.profile || '';
+      const isGlobalPanel = ['Autoridad', 'Desarrollo Físico'].includes(profile);
+      const dtos = isGlobalPanel
+        ? await this.api.listPanelIncidents(filters)
+        : await this.api.listIncidents(filters);
+      return dtos.map(fromIncidentDto);
     }
     return this.repository.transaction<IncidentReport[]>('readonly', (s) => s.getAll());
   }

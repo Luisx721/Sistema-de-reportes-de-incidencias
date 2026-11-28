@@ -2,6 +2,7 @@ import { inject, Injectable } from '@angular/core';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
 import { API_CONFIG } from './api-config';
+import { IncidentFilters } from '../domain/models/incident.model';
 import {
   ChangeIncidentDto,
   CreateIncidentDto,
@@ -108,21 +109,25 @@ export class ApiClient {
   }
 
   listIncidents(
-    filters: {
-      query?: string;
-      category?: string;
-      location?: string;
-      state?: string;
-      from?: string;
-      to?: string;
-      urgency?: string;
-    } = {}
+    filters: IncidentFilters = {}
   ): Promise<IncidentDto[]> {
     const params = Object.fromEntries(
       Object.entries(filters).filter(([, value]) => !!value)
     ) as Record<string, string>;
     return firstValueFrom(
       this.http.get<IncidentDto[]>(`${this.base}/api/incidencias`, {
+        headers: this.headers,
+        params,
+      })
+    );
+  }
+
+  listPanelIncidents(filters: IncidentFilters = {}): Promise<IncidentDto[]> {
+    const params = Object.fromEntries(
+      Object.entries(filters).filter(([, value]) => !!value)
+    ) as Record<string, string>;
+    return firstValueFrom(
+      this.http.get<IncidentDto[]>(`${this.base}/api/incidencias/panel`, {
         headers: this.headers,
         params,
       })
@@ -147,15 +152,7 @@ export class ApiClient {
     );
   }
 
-  exportCsv(filters: {
-    query?: string;
-    category?: string;
-    location?: string;
-    state?: string;
-    from?: string;
-    to?: string;
-    urgency?: string;
-  } = {}): Promise<Blob> {
+  exportCsv(filters: IncidentFilters = {}): Promise<Blob> {
     const params = Object.fromEntries(
       Object.entries(filters).filter(([, value]) => !!value)
     ) as Record<string, string>;
@@ -309,5 +306,4 @@ export class ApiClient {
       )
     );
   }
-
 }

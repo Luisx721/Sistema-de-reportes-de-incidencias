@@ -9,7 +9,7 @@ npm start
 
 Abrir http://localhost:4200. La demostración Angular no necesita PostgreSQL.
 
-Consultar [la guía de implementación](docs/IMPLEMENTACION_ANGULAR.md) para perfiles de prueba, arquitectura, comprobaciones y alcance pendiente de la API C# y PostgreSQL 17 en Docker.
+Para configurar PostgreSQL e iniciar la API, consultá las [instrucciones del backend](INSTRUCCIONES_ROL_2.md). Para conocer la estructura del frontend y los perfiles de prueba, consultá la [guía de implementación de Angular](../IMPLEMENTACION_ANGULAR.md).
 
 ```sh
 npm run build

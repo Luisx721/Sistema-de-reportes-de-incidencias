@@ -1,40 +1,66 @@
-# Backend núcleo Rol 2
+# Backend núcleo del Rol 2
 
-La solución del backend está en `backend/` y usa .NET 11.0.100. El contrato conserva los nombres del modelo Angular (`code`, `category`, `location`, `description`, `state`, `created`, `history`, `priority`, `responsibleUnit`) y añade `version`. PostgreSQL usa una clave interna `id`; la API identifica reportes por el código público único y no interpreta los IDs locales de Angular como IDs de PostgreSQL. La adaptación del cliente se realizará mediante DTO y mapeo explícito.
+La API del sistema está en `backend/Incidencias.Api/`. Usa .NET 10 y PostgreSQL 17. En el entorno local del proyecto, PostgreSQL utiliza la base `midb` y se expone en el puerto `5440`. Angular consume la API mediante `HttpClient`.
 
-## Estado actual
+## Preparar una base local de pruebas
 
-El backend Rol 2 (`backend/Incidencias.Api`) ya está integrado y validado contra la BD oficial ProyectoBD: PostgreSQL 17, base `midb` en `localhost:5440`. Se retiraron `compose.rol2.yml` y `db/provisional/001_schema.sql`; los volúmenes Docker existentes se conservaron.
+Desde la raíz del repositorio, levantá PostgreSQL:
 
-Pasaron las 15 pruebas de dominio y el recorrido HTTP completo contra `midb`: registro `201`, seguimiento público sin identidad `200`, panel anónimo `401`, login `200`, permisos `403`, filtros por fecha `200`, rango invertido `400`, expediente `200`, cambio de estado e historial `200`, conflicto de versión `409` y cierre de sesión `204`/posterior uso `401`.
+```powershell
+docker compose -f .\ProyectoBD\docker-compose.yml up -d
+```
 
-## Preparar una base nueva de ProyectoBD
+Al crear un volumen nuevo, PostgreSQL ejecuta los archivos de `ProyectoBD/sql-init/`. Para completar una base nueva, aplicá los scripts de `db/official/` en este orden:
 
-Los siguientes pasos documentan la preparación de una instancia nueva. No es necesario volver a aplicarlos a una instancia que ya tiene estas extensiones. Los scripts SQL se aplican una sola vez en la base correspondiente.
+1. `002_rol2_sessions.sql` y `003_rol2_versions.sql` crean el soporte de sesiones y versiones.
+2. Para preparar la cuenta técnica de desarrollo, ejecutá `.\db\official\solicitar-clave.ps1` desde la raíz. El script pide la contraseña y aplica `004_dev_seed.sql`.
+3. `005_dev_catalogs.sql` carga los catálogos opcionales de desarrollo.
+4. `006_views.sql` crea `VW_Listado_incidencias`, que utiliza el panel.
+5. `007_schema_alignment.sql`, `008_codigo_seguimiento.sql` y `009_control_respaldo.sql` completan los ajustes del esquema, del código de seguimiento y del control de respaldo.
 
-1. Levantar ProyectoBD con `ProyectoBD/docker-compose.yml`.
-2. Aplicar por primera vez `db/official/002_rol2_sessions.sql` y `db/official/003_rol2_versions.sql` en el contenedor `sistema-de-reportes-de-incidencias`.
-3. Ejecutar `db/official/solicitar-clave.ps1` para cargar el seed mínimo de desarrollo (`004_dev_seed.sql`). El script solicita una contraseña local y la guarda como hash PBKDF2-SHA256; no guardar claves en Git.
-4. Levantar `backend/Incidencias.Api` en `http://localhost:5080`, configurando `INCIDENCIAS_DB` o User Secrets/configuración local basada en `backend/Incidencias.Api/appsettings.example.json`. No guardar credenciales en archivos versionados.
-5. Ejecutar `backend/scripts/Probar-Recorrido-Rol2.ps1` contra `http://localhost:5080`.
+Si la base ya existe, comprobá cuáles de estos cambios tiene aplicados antes de ejecutar los pendientes.
 
-El seed es mínimo y sirve para desarrollo y pruebas; los catálogos y cuentas institucionales finales siguen pendientes de acuerdo.
+## Compilar e iniciar la API
 
-## Superficie HTTP
+Configurá la conexión a la base mediante `INCIDENCIAS_DB` o `ConnectionStrings:Incidencias` en la configuración local. El archivo `backend/Incidencias.Api/appsettings.example.json` sirve de ejemplo. Mantené las credenciales fuera del repositorio.
 
-- `POST /api/sesiones`, `GET /api/sesiones/actual`, `DELETE /api/sesiones/actual`: inicio, consulta y cierre de sesión. Los permisos se recuperan de la cuenta activa y cada consulta extiende la actividad; 30 minutos sin actividad invalidan la sesión. El token crudo se entrega solo al iniciar y en PostgreSQL se conserva su SHA-256.
-- `POST /api/incidencias`: registro público con código aleatorio generado en servidor y descripción de 20 a 2000 caracteres.
-- `GET /api/seguimiento/{code}`: seguimiento sin token, con estado e historial y sin campos de identidad.
-- `GET /api/incidencias`: panel autenticado con `query`, `category`, `location`, `state`, `from`, `to`; la API limita resultados por rol/área.
-- `GET /api/incidencias/{code}`: expediente de la unidad o área con permiso vigente.
-- `PUT /api/incidencias/{code}`: cuerpo `{ "state", "priority", "note", "version" }`. Requiere observación de diez caracteres, permiso y versión actual. La escritura y el historial comparten transacción; una versión obsoleta responde `409`.
+Desde la raíz, ejecutá en PowerShell:
 
-Los DTO usan camelCase de ASP.NET Core. El panel entrega `version` para concurrencia. El seguimiento público no entrega descripción, referencia, nombre del reportante, vínculo, responsable ni actor del historial; sustituye las observaciones libres por textos genéricos para impedir que una nota revele datos personales.
+```powershell
+dotnet build .\backend\sistema-de-reportes-de-incindencias.slnx
+$env:ASPNETCORE_ENVIRONMENT = 'Development'
+dotnet run --project .\backend\Incidencias.Api -- --urls http://localhost:5080
+```
 
-## Configuración local
+Con la API en ejecución, abrí `http://localhost:5080/health` para comprobar que responde.
 
-La API recibe la conexión por `INCIDENCIAS_DB` o `ConnectionStrings:Incidencias` en User Secrets/configuración local. Usa `backend/Incidencias.Api/appsettings.example.json` como plantilla y nunca guardes contraseñas en archivos versionados. El puerto de desarrollo es `http://localhost:5080`.
+## Rutas principales
 
-## Conexión pendiente de Angular
+| Ruta | Comportamiento |
+|---|---|
+| `POST /api/sesiones` | Inicia sesión y devuelve el token. |
+| `GET /api/sesiones/actual` y `DELETE /api/sesiones/actual` | Consultan y cierran la sesión vigente. |
+| `POST /api/incidencias` | Registra una incidencia. Si encuentra una coincidencia abierta, devuelve el código existente y `isDuplicate: true` sin exponer la identidad del reportante. Solo un registro anónimo nuevo recibe el token temporal para subir fotos. |
+| `GET /api/seguimiento/{code}` | Seguimiento público RF-10. Muestra fecha, estado y observación técnica de los cambios. Para el estado inicial devuelve «Reporte recibido.». |
+| `GET /api/incidencias/publicas` | Lista pública resumida de hasta 100 incidencias, sin identidad, descripción ni prioridad técnica. |
+| `GET /api/incidencias/panel` | Panel centralizado RF-13 para Mantenimiento y Desarrollo Físico. Ambas unidades pueden ver el resumen general. Abrir o editar un expediente requiere autorización sobre ese caso. |
+| `GET /api/incidencias` | Bandeja autenticada con filtros y alcance según el perfil o área. |
+| `GET /api/incidencias/{code}` | Devuelve el expediente al usuario autorizado. |
+| `PUT /api/incidencias/{code}` | Actualiza estado o prioridad. Requiere permiso, observación de al menos diez caracteres y versión vigente. Una versión obsoleta devuelve `409`. |
 
-Angular aún usa adaptadores locales. Falta configurarlo con `HttpClient` para apuntar a `http://localhost:5080` en desarrollo y HTTPS en despliegue; mapear el modelo actual a los DTO camelCase (`code`, `category`, `location`, `description`, `state`, `created`, `history`, `priority`, `version`). Enviar el bearer token para panel, detalle y cambio; no guardarlo en IndexedDB con incidencias ni tratar guards como autorización. Manejar `401` cerrando o renovando sesión, `403` por ámbito y `409` recargando el expediente y solicitando reintento. El seguimiento público debe usar únicamente el DTO reducido de `/api/seguimiento/{code}`. Acordar catálogos y cuentas institucionales finales, además del contrato para modalidad asistida, identidad del reportante y cargas de fotografías, antes de conectar esos flujos.
+## Contrato OpenAPI
+
+El contrato versionado está en [docs/api/openapi.json](../api/openapi.json). Con la API local en ambiente `Development`, también se puede consultar en `http://localhost:5080/openapi/v1.json`.
+
+## Comprobar el funcionamiento
+
+El programa de pruebas contiene 54 comprobaciones base. Si `INCIDENCIAS_DB` está configurada, también ejecuta comprobaciones de integración con PostgreSQL.
+
+En una segunda terminal, desde la raíz:
+
+```powershell
+dotnet run --project .\backend\Incidencias.Domain.Tests
+.\backend\scripts\Probar-Recorrido-Rol2.ps1 -BaseUrl http://localhost:5080
+```
+
+Ejecutá el recorrido contra una base de pruebas. Pide la contraseña de la cuenta técnica y verifica registro, duplicados, seguimiento público, panel RF-13, permisos, cambios de estado, conflicto de versión y cierre de sesión. Para comprobar la repetibilidad, ejecutá el mismo script dos veces seguidas.

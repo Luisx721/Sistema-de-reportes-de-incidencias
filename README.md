@@ -1,6 +1,6 @@
 # Sistema de Reportes de Incidencias UES
 
-Aplicación Angular con interfaces conectadas por rol y datos locales de demostración.
+Sistema de reportes de incidencias de la UES con interfaces por rol en Angular, una API en .NET 10 y PostgreSQL 17.
 
 ## Ejecutar
 
@@ -26,6 +26,8 @@ npx playwright install chromium
 npm run test:e2e
 ```
 
-El frontend utiliza IndexedDB para reportes y fotografías, localStorage para cuentas y catálogos y sessionStorage para la sesión. La API C# y PostgreSQL 17 en Docker siguen pendientes. Los controles del frontend son de demostración y deben reproducirse en el servidor antes de utilizar datos reales.
+La aplicación Angular consume la API de `backend/Incidencias.Api/`, desarrollada en .NET 10 y conectada a PostgreSQL 17. El modo de demostración utiliza almacenamiento local del navegador.
+
+Para levantar la base de datos, iniciar la API y ejecutar las pruebas, consultá las [instrucciones del backend](docs/guias/INSTRUCCIONES_ROL_2.md). El [contrato OpenAPI](docs/api/openapi.json) documenta las rutas disponibles.
 
 El prototipo anterior se conserva en `incidencias/` como referencia histórica. La aplicación activa está en `src/app/`.

@@ -54,7 +54,7 @@ El contrato versionado está en [docs/api/openapi.json](../api/openapi.json). Co
 
 ## Comprobar el funcionamiento
 
-El programa de pruebas contiene 54 comprobaciones base. Si `INCIDENCIAS_DB` está configurada, también ejecuta comprobaciones de integración con PostgreSQL.
+El programa de pruebas contiene 55 comprobaciones base. Si `INCIDENCIAS_DB` está configurada, también ejecuta comprobaciones de integración con PostgreSQL.
 
 En una segunda terminal, desde la raíz:
 

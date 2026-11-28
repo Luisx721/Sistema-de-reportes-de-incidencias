@@ -30,7 +30,13 @@ builder.Services.AddCors(options => options.AddDefaultPolicy(policy => policy.Wi
     builder.Configuration.GetSection("Cors:Origins").Get<string[]>() ?? ["http://localhost:4200", "http://127.0.0.1:4200"])
     .AllowAnyHeader().AllowAnyMethod()));
 
-builder.Services.AddDataProtection();
+var keysPath = builder.Configuration["DataProtection:KeysPath"] ??
+               Environment.GetEnvironmentVariable("INCIDENCIAS_KEYS_PATH") ??
+               Path.Combine(builder.Environment.ContentRootPath, "keys");
+
+builder.Services.AddDataProtection()
+    .SetApplicationName("Incidencias.Api")
+    .PersistKeysToFileSystem(new DirectoryInfo(keysPath));
 
 // Registrar los servicios necesarios para generar la documentación OpenAPI de la API.
 builder.Services.AddOpenApi();

@@ -70,3 +70,6 @@ App_Data/
 /carpeta-temporal/
 ProyectoBD/backups/
 backend/Incidencias.Api/uploads/fotos_restauradas/
+
+backend/Incidencias.Api/keys/
+backend/Incidencias.Api/uploads/

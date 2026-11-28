@@ -115,7 +115,7 @@ export class WorkspaceComponent implements OnInit, OnDestroy {
     if (!this.data.demoMode)
       return (
         !['Resuelto', 'Rechazado/Cerrado'].includes(this.selected.state) &&
-        ['Jefatura', 'Ordenanza', 'Mantenimiento', 'Desarrollo Físico'].includes(
+        ['Mantenimiento', 'Desarrollo Físico'].includes(
           this.auth.user()?.profile || '',
         )
       );

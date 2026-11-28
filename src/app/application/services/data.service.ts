@@ -229,48 +229,42 @@ export class DataService {
       const localLocation = this.locations.find((location) => location.id === report.location);
       if (!localLocation) throw new Error('Selecciona una ubicación válida.');
 
-      const created = await this.api.createIncident(toCreateIncident(report, localLocation.name));
+      
+  const created = await this.api.createIncident(toCreateIncident(report, localLocation.name));
 
-      // Subir fotografías adjuntas si existen (máx. 3)
-      if (report.photos && report.photos.length > 0) {
-        const failedPhotos = await this.uploadReportPhotos(created.code, report.photos);
-        if (failedPhotos.length > 0) {
-          const err: any = new Error(
-            `El reporte ${created.code} se registró, pero no se pudo subir: ${failedPhotos.join(', ')}.`
-          );
-          err.createdCode = created.code;
-          err.failedPhotos = failedPhotos;
-          throw err;
-        }
-      }
+  // Marca el reporte como duplicado para avisar al usuario después
+    if (created.isDuplicate) {
+  sessionStorage.setItem(`ues-dup-${created.code}`, '1');
+}
 
-      // Marca el reporte como duplicado para avisar al usuario después
-      if (created.isDuplicate) {
-        sessionStorage.setItem(`ues-dup-${created.code}`, '1');
-      }
+// Subir fotografías adjuntas si existen (máx. 3)
+if (report.photos && report.photos.length > 0) {
+  const uploadToken = created.photoUploadToken ?? undefined;
 
-      // Subir fotografías adjuntas si existen (máx. 3)
-      if (report.photos && report.photos.length > 0) {
-        const uploadToken = created.photoUploadToken ?? undefined;
+  // Si es invitado y el reporte fue marcado como duplicado, no puede subir fotos
+  if (!this.auth.user() && !uploadToken && created.isDuplicate) {
+    return created.code;
+  }
 
-        // Si es invitado y el reporte fue marcado como duplicado, el backend no emite token de subida
-        if (!this.auth.user() && !uploadToken && created.isDuplicate) {
-          return created.code;
-        }
+  const failedPhotos = await this.uploadReportPhotos(
+    created.code,
+    report.photos,
+    uploadToken
+  );
 
-        const failedPhotos = await this.uploadReportPhotos(created.code, report.photos, uploadToken);
-        if (failedPhotos.length > 0) {
-          const err: any = new Error(
-            `El reporte ${created.code} se registró, pero no se pudo subir: ${failedPhotos.join(', ')}.`
-          );
-          err.createdCode = created.code;
-          err.failedPhotos = failedPhotos;
-          err.photoUploadToken = uploadToken;
-          throw err;
-        }
-      }
+  if (failedPhotos.length > 0) {
+    const err: any = new Error(
+      `El reporte ${created.code} se registró, pero no se pudo subir: ${failedPhotos.join(', ')}.`
+    );
+    err.createdCode = created.code;
+    err.failedPhotos = failedPhotos;
+    err.photoUploadToken = uploadToken;
+    throw err;
+  }
+}
 
-      return created.code;
+return created.code;
+
     }
 
     // Modo demo: guarda en IndexedDB
